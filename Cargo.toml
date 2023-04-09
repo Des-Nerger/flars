@@ -1,0 +1,18 @@
+[package]
+name = "flars"
+version = "0.0.0"
+edition = "2021"
+
+[profile.release]
+strip = true
+# lto = true
+
+[dependencies]
+ary = { path = "../ary" }
+
+[dependencies.sdl2]
+version = "0.35"
+features = [
+	"image",
+#	"bundled",
+]
