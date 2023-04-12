@@ -1,10 +1,11 @@
 use {
-	crate::utils::*,
+	crate::utils::__,
 	ary::ary,
 	core::array,
 	sdl2::{event::Event, keyboard::Scancode, EventPump},
 };
 
+#[derive(Clone, Copy)]
 #[repr(usize)]
 pub enum InputCommand {
 	CANCEL,

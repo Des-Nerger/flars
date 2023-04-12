@@ -1,28 +1,41 @@
+/**
+ * mod game_engine
+ *
+ * Hands off the logic and rendering for the current game mode
+ *
+ * @author Clint Bellanger, Des-Nerger
+ * @license GPLv3
+ */
 use {
-	crate::{avatar::*, input_state::*, map_iso::*, utils::*},
+	crate::{avatar::*, input_state::*, map_iso::*, utils::__},
 	core::cell::RefCell,
 	sdl2::{render::Canvas, video::Window},
-	std::rc::Rc,
 };
 
 pub struct GameEngine<'a> {
-	_canvas: &'a RefCell<Canvas<Window>>,
+	screen: &'a RefCell<Canvas<Window>>,
 	input: &'a RefCell<InputState>,
-	playerChar: Avatar,
-	map: Rc<RefCell<MapIso>>,
+	playerChar: Avatar<'a>,
+	map: &'a RefCell<MapIso>,
 	pub done: bool,
 }
 
 impl<'a> GameEngine<'a> {
-	pub fn new(canvas: &'a RefCell<Canvas<Window>>, input: &'a RefCell<InputState>) -> Self {
-		let map = Rc::new(RefCell::new(MapIso::new(canvas)));
-		Self {
-			_canvas: canvas,
-			input,
-			playerChar: Avatar::new(canvas, input, Rc::clone(&map)),
-			map,
-			done: false,
-		}
+	/**
+	 * Passthrough constructor; just to avoid publicizing all the fields.
+	 * For the actual one, see [`lеt!(... = &mut GameEngine::new(...))`].
+	 *
+	 * [`lеt!(... = &mut GameEngine::new(...))`]: crate::lеt
+	 */
+	#[inline(always)]
+	pub fn new(
+		screen: &'a RefCell<Canvas<Window>>,
+		input: &'a RefCell<InputState>,
+		playerChar: Avatar<'a>,
+		map: &'a RefCell<MapIso>,
+		done: bool,
+	) -> Self {
+		GameEngine { screen, input, playerChar, map, done }
 	}
 
 	/**

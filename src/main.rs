@@ -8,6 +8,7 @@
 )]
 
 mod avatar;
+mod collision;
 mod game_engine;
 mod input_state;
 mod map_iso;
@@ -26,13 +27,13 @@ fn main() {
 	use {game_engine::*, input_state::*};
 
 	const FPS: u32 = 24;
-	let (delay, input, canvas) = {
-		let sdl2Context = sdl2::init().unwrap();
+	let (delay, input, screen) = {
+		let sdl2 = sdl2::init().unwrap();
 		(
 			Duration::from_secs(1) / FPS,
-			&RefCell::new(InputState::new(sdl2Context.event_pump().unwrap())),
+			&RefCell::new(InputState::new(sdl2.event_pump().unwrap())),
 			&RefCell::new(
-				sdl2Context
+				sdl2
 					.video()
 					.unwrap()
 					.window("", 640, 480)
@@ -45,15 +46,16 @@ fn main() {
 			),
 		)
 	};
-	let (mut nextFrame_instant, engine) = (Instant::now() + delay, &mut GameEngine::new(canvas, input));
+	lеt!(engine = &mut GameEngine::new(screen, input));
+	let mut nextFrame_instant = Instant::now() + delay;
 	{
-		let (canvas, input) = &mut (canvas.borrow_mut(), input.borrow_mut());
-		canvas.set_draw_color(Color::RGB(0x00, 0x00, 0x00));
-		loopIterationBeginning(canvas, input);
+		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
+		screen.set_draw_color(Color::RGB(0x00, 0x00, 0x00));
+		loopIterationBeginning(screen, input);
 	}
-	fn loopIterationBeginning(canvas: &mut RefMut<'_, Canvas<Window>>, input: &mut RefMut<'_, InputState>) {
+	fn loopIterationBeginning(screen: &mut RefMut<'_, Canvas<Window>>, input: &mut RefMut<'_, InputState>) {
 		// black out
-		canvas.clear();
+		screen.clear();
 
 		input.handle();
 	}
@@ -64,8 +66,8 @@ fn main() {
 		thread::sleep(nextFrame_instant - Instant::now());
 		nextFrame_instant += delay;
 
-		let (canvas, input) = &mut (canvas.borrow_mut(), input.borrow_mut());
-		canvas.present();
+		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
+		screen.present();
 
 		// Engine done means the user escapes the main game menu.
 		// Input done means the user closes the window.
@@ -75,6 +77,6 @@ fn main() {
 			break;
 		}
 
-		loopIterationBeginning(canvas, input);
+		loopIterationBeginning(screen, input);
 	}
 }

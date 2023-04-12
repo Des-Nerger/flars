@@ -1,6 +1,6 @@
 [package]
 name = "flars"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 
 [profile.release]
@@ -8,7 +8,8 @@ strip = true
 # lto = true
 
 [dependencies]
-ary = { path = "../ary" }
+ary = "0.1"
+glam = "0.22"
 
 [dependencies.sdl2]
 version = "0.35"
