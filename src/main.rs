@@ -1,17 +1,18 @@
 #![warn(clippy::pedantic, elided_lifetimes_in_paths, explicit_outlives_requirements)]
 #![allow(
-	non_camel_case_types,
-	non_snake_case,
 	confusable_idents,
 	mixed_script_confusables,
+	non_camel_case_types,
+	non_snake_case,
 	uncommon_codepoints
 )]
 
 mod avatar;
-mod collision;
+mod collider;
 mod game_engine;
 mod input_state;
 mod map_iso;
+mod tileset;
 mod utils;
 
 use {
@@ -36,7 +37,7 @@ fn main() {
 				sdl2
 					.video()
 					.unwrap()
-					.window("", 640, 480)
+					.window(&format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")), 640, 480)
 					.position_centered()
 					.build()
 					.unwrap()

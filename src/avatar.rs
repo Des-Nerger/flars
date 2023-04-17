@@ -12,40 +12,32 @@ use {
 		map_iso::*,
 		utils::{
 			Direction::{self, *},
-			Renderable, __,
+			RectExt, Renderable, __,
 		},
 	},
 	core::cell::RefCell,
-	glam::IVec2,
+	glam::{IVec2, IVec4},
 	sdl2::{
 		image::LoadTexture,
+		rect::Rect,
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
 };
 
 enum AvatarState {
-	Stance,
-	Run,
-	Swing,
-	Block,
-	Hit,
-	Die,
-	Cast,
-	Shoot,
+	STANCE,
+	RUN,
 }
 
-pub struct Avatar<'a> {
+pub struct Avatar<'a, 'map> {
 	sprites: Texture<'a>,
 	input: &'a RefCell<InputState>,
-	map: &'a RefCell<MapIso>,
+	map: &'map RefCell<MapIso<'a>>,
 
 	curState: AvatarState,
 	pos: IVec2,
 	direction: Direction,
-	lockSwing: bool,
-	lockCast: bool,
-	lockShoot: bool,
 	curFrame: i32,
 	displayedFrame: i32,
 	animForward: bool,
@@ -53,11 +45,11 @@ pub struct Avatar<'a> {
 	diagSpeed: i32,
 }
 
-impl<'a> Avatar<'a> {
+impl<'a, 'map> Avatar<'a, 'map> {
 	pub fn new(
 		textureCreator: &'a TextureCreator<WindowContext>,
 		input: &'a RefCell<InputState>,
-		map: &'a RefCell<MapIso>,
+		map: &'map RefCell<MapIso<'a>>,
 	) -> Self {
 		let mаp;
 		Self {
@@ -65,7 +57,7 @@ impl<'a> Avatar<'a> {
 			map,
 
 			// other init
-			curState: AvatarState::Stance,
+			curState: AvatarState::STANCE,
 			pos: {
 				mаp = map.borrow();
 				mаp.spawn
@@ -75,9 +67,6 @@ impl<'a> Avatar<'a> {
 			curFrame: 1,
 			displayedFrame: 0,
 			animForward: true,
-			lockSwing: false,
-			lockCast: false,
-			lockShoot: false,
 
 			hVSpeed: 6,
 			diagSpeed: 4,
@@ -95,14 +84,14 @@ impl<'a> Avatar<'a> {
 		self.map.borrow_mut().collider.mоve(
 			&mut self.pos,
 			IVec2::from_array(match self.direction {
-				Clock09_00 => [-1, 1],
-				Clock10_30 => [-1, 0],
-				Clock12_00 => [-1, -1],
-				Clock01_30 => [0, -1],
-				Clock03_00 => [1, -1],
-				Clock04_30 => [1, 0],
-				Clock06_00 => [1, 1],
-				Clock07_30 => [0, 1],
+				CLOCK09_00 => [-1, 1],
+				CLOCK10_30 => [-1, 0],
+				CLOCK12_00 => [-1, -1],
+				CLOCK01_30 => [0, -1],
+				CLOCK03_00 => [1, -1],
+				CLOCK04_30 => [1, 0],
+				CLOCK06_00 => [1, 1],
+				CLOCK07_30 => [0, 1],
 			}),
 			[self.diagSpeed, self.hVSpeed][(self.direction as __) % 2],
 		)
@@ -112,14 +101,14 @@ impl<'a> Avatar<'a> {
 		// handle direction changes
 		let pressing = &self.input.borrow().pressing;
 		for tuple in [
-			(&[UP, LEFT][..], Clock10_30),
-			(&[UP, RIGHT][..], Clock01_30),
-			(&[DOWN, RIGHT][..], Clock04_30),
-			(&[DOWN, LEFT][..], Clock07_30),
-			(&[LEFT][..], Clock09_00),
-			(&[UP][..], Clock12_00),
-			(&[RIGHT][..], Clock03_00),
-			(&[DOWN][..], Clock06_00),
+			(&[UP, LEFT][..], CLOCK10_30),
+			(&[UP, RIGHT][..], CLOCK01_30),
+			(&[DOWN, RIGHT][..], CLOCK04_30),
+			(&[DOWN, LEFT][..], CLOCK07_30),
+			(&[LEFT][..], CLOCK09_00),
+			(&[UP][..], CLOCK12_00),
+			(&[RIGHT][..], CLOCK03_00),
+			(&[DOWN][..], CLOCK06_00),
 		] {
 			if tuple.0.iter().all(|&inputCommand| pressing[inputCommand as __]) {
 				self.direction = tuple.1;
@@ -132,7 +121,7 @@ impl<'a> Avatar<'a> {
 		let a /*vatar */ = self;
 		use AvatarState::*;
 		match a.curState {
-			Stance => {
+			STANCE => {
 				loop {
 					(a.curFrame, a.animForward) = if a.animForward {
 						a.curFrame += 1;
@@ -156,11 +145,11 @@ impl<'a> Avatar<'a> {
 				a.setDirection();
 				if a.pressingMove() {
 					if a.mоve() {
-						(a.curFrame, a.curState) = (1, Run);
+						(a.curFrame, a.curState) = (1, RUN);
 					}
 				}
 			}
-			Run => {
+			RUN => {
 				a.curFrame += 1;
 				if a.curFrame >= 16 {
 					a.curFrame = 0;
@@ -177,15 +166,23 @@ impl<'a> Avatar<'a> {
 					} else {
 						break;
 					};
-					a.curState = Stance;
+					a.curState = STANCE;
 					break;
 				}
 			}
-			_ => {}
 		}
+
+		// calc new cam position from player position
+		// cam is focused at player position
+		a.map.borrow_mut().cam = a.pos;
 	}
 
-	pub fn getRender(&self) -> Renderable {
-		Renderable {}
+	pub fn getRender(&self) -> Renderable<'_> {
+		Renderable {
+			mapPos: self.pos,
+			sprite: &self.sprites,
+			src: Rect::fromArray((128 * IVec4::new(self.displayedFrame, self.direction as _, 1, 1)).to_array()),
+			offset: IVec2::new(64, 112),
+		}
 	}
 }

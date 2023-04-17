@@ -9,33 +9,28 @@
 use {
 	crate::{avatar::*, input_state::*, map_iso::*, utils::__},
 	core::cell::RefCell,
-	sdl2::{render::Canvas, video::Window},
+	sdl2::{render::TextureCreator, video::WindowContext},
 };
 
-pub struct GameEngine<'a> {
-	screen: &'a RefCell<Canvas<Window>>,
+pub struct GameEngine<'a, 'map> {
 	input: &'a RefCell<InputState>,
-	playerChar: Avatar<'a>,
-	map: &'a RefCell<MapIso>,
+	playerChar: Avatar<'a, 'map>,
+	map: &'map RefCell<MapIso<'a>>,
 	pub done: bool,
 }
 
-impl<'a> GameEngine<'a> {
+impl<'a, 'map> GameEngine<'a, 'map> {
 	/**
-	 * Passthrough constructor; just to avoid publicizing all the fields.
-	 * For the actual one, see [`lеt!(... = &mut GameEngine::new(...))`].
+	 * Not meant to be used directly, but rather through the [`lеt!(_ = &mut GameEngine::new(..))`] macro.
 	 *
-	 * [`lеt!(... = &mut GameEngine::new(...))`]: crate::lеt
+	 * [`lеt!(_ = &mut GameEngine::new(..))`]: crate::lеt
 	 */
-	#[inline(always)]
 	pub fn new(
-		screen: &'a RefCell<Canvas<Window>>,
+		textureCreator: &'a TextureCreator<WindowContext>,
 		input: &'a RefCell<InputState>,
-		playerChar: Avatar<'a>,
-		map: &'a RefCell<MapIso>,
-		done: bool,
+		map: &'map RefCell<MapIso<'a>>,
 	) -> Self {
-		GameEngine { screen, input, playerChar, map, done }
+		GameEngine { input, playerChar: Avatar::new(textureCreator, input, map), map, done: false }
 	}
 
 	/**
@@ -56,6 +51,6 @@ impl<'a> GameEngine<'a> {
 	pub fn render(&self) {
 		// The strategy here is to make a list of Renderables from all objects not already on the map.
 		// Pass this list/array to the map, which will draw them inline with the map tiles/objects.
-		self.map.borrow().render(self.playerChar.getRender());
+		self.map.borrow_mut().render(self.playerChar.getRender());
 	}
 }

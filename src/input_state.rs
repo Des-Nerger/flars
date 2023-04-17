@@ -26,14 +26,13 @@ pub struct InputState {
 
 impl InputState {
 	const BINDING: [Scancode; KEY_COUNT as _] = {
-		use Scancode::*;
 		ary![=>
-			(CANCEL as __): Escape,
-			(ACCEPT as __): Return,
-			(UP as __): Up,
-			(DOWN as __): Down,
-			(LEFT as __): Left,
-			(RIGHT as __): Right,
+			(CANCEL as __): Scancode::Escape,
+			(ACCEPT as __): Scancode::Return,
+			(UP as __): Scancode::Up,
+			(DOWN as __): Scancode::Down,
+			(LEFT as __): Scancode::Left,
+			(RIGHT as __): Scancode::Right,
 		]
 	};
 
