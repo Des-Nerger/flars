@@ -1,5 +1,5 @@
 # flars
-Flars is a reimplementation of the Free/Libre Action Roleplaying game Engine (flare-engine) v0.0x, written in Rust.
+Flars is a reimplementation of the Free/Libre Action Roleplaying game Engine ([flare-engine](https://github.com/flareteam/flare-engine)) v0.0x, written in Rust.
 Requires the SDL2 and SDL_image 2.0 development libraries to be installed.
 For instance, in Debian / Ubuntu this can be done with:
 ```bash
