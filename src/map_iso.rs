@@ -1,10 +1,12 @@
 use {
 	crate::{
 		collider::*,
+		settings::SCREEN_CENTER,
 		tileset::*,
-		utils::{default, Direction, Renderable, __},
+		unlet,
+		utils::{default, uЗ2, Direction, Renderable, __},
 	},
-	core::{array, cell::RefCell, str::FromStr},
+	core::{array, cell::RefCell, iter, str::FromStr},
 	glam::IVec2,
 	sdl2::{
 		rect::Rect,
@@ -17,15 +19,14 @@ use {
 pub struct MapIso<'a> {
 	screen: &'a RefCell<Canvas<Window>>,
 
-	pub width: u32,
-	pub height: u32,
+	pub widthLog2: u32,
 	pub cam: IVec2,
 	pub spawn: IVec2,
 	pub spawnDirection: Direction,
 	pub tileset: Tileset<'a>,
 
-	pub background: Vec<u32>,
-	pub object: Vec<u32>,
+	pub background: Box<[u32]>,
+	pub object: Box<[u32]>,
 	pub collider: Collider,
 }
 
@@ -40,6 +41,7 @@ impl<'a> MapIso<'a> {
 			mut tilesetPath,
 			tiled::Map { width, height, properties, layers, .. },
 		) = (default(), default(), default(), tiled::Map::load_from_file("map.tmj".as_ref()).unwrap());
+		let widthLog2Ceil = uЗ2::log2Ceil(width);
 		for (key, value) in properties.into_iter().filter_map(|(key, value)| {
 			if let TiledValue::String(value) = value {
 				Some((key, value))
@@ -60,27 +62,34 @@ impl<'a> MapIso<'a> {
 				_ => {}
 			}
 		}
-		let [mut background, mut object, mut collision] =
-			array::from_fn(|_| vec![default(); (width * height) as _]);
-		for (layerName, layerData) in layers.iter().filter_map(|layer| {
-			if let TileLayer(tileLayer) = &layer.layer_type {
-				Some((layer.name.as_str(), &tileLayer.data))
-			} else {
-				None
+		let [mut background, mut object, mut colmap] =
+			array::from_fn(|_| vec![default(); (height << widthLog2Ceil) as _].into_boxed_slice());
+		{
+			let [width, pow2Width] = [width as __, 1 << widthLog2Ceil];
+			unlet!(widthLog2Ceil);
+			for (layerName, srcData) in layers.into_iter().filter_map(|layer| {
+				if let TileLayer(tileLayer) = layer.layer_type {
+					Some((layer.name, tileLayer.data.into_boxed_slice()))
+				} else {
+					None
+				}
+			}) {
+				let destData = match layerName.as_str() {
+					"background" => &mut background,
+					"object" => &mut object,
+					"collision" => &mut colmap,
+					_ => unreachable!(),
+				};
+				for (idxDest, idxSrc) in
+					iter::zip((0..destData.len()).step_by(pow2Width), (0..srcData.len()).step_by(width))
+				{
+					(&mut destData[idxDest..][..width]).copy_from_slice(&srcData[idxSrc..][..width]);
+				}
 			}
-		}) {
-			match layerName {
-				"background" => &mut background,
-				"object" => &mut object,
-				"collision" => &mut collision,
-				_ => unreachable!(),
-			}
-			.copy_from_slice(layerData);
 		}
 		Self {
 			screen,
-			width,
-			height,
+			widthLog2: widthLog2Ceil,
 			// cam(x,y) is where on the map the camera is pointing
 			// units = 32
 			cam: default(),
@@ -89,7 +98,7 @@ impl<'a> MapIso<'a> {
 			tileset: Tileset::new(textureCreator, tilesetPath),
 			background,
 			object,
-			collider: Collider::new(collision),
+			collider: Collider::new(colmap, widthLog2Ceil as _),
 		}
 	}
 
@@ -104,15 +113,15 @@ impl<'a> MapIso<'a> {
 		// check to see if it's time to draw the next renderable yet.
 
 		let m /*apIso */ = self;
-		let screen = &mut m.screen.borrow_mut();
+		let (width, screen) = (1 << m.widthLog2, &mut m.screen.borrow_mut());
 
 		// todo: trim by screen rect
 		// background
 		{
-			let (mut ij, background) = (0, m.background.as_slice());
-			for j in 0..m.height as i32 {
-				for i in 0..m.width as i32 {
-					let currentTile = background[ij];
+			let (height, mut ij) = ((m.background.len() >> m.widthLog2) as i32, 0);
+			for j in 0..height {
+				for i in 0..width {
+					let currentTile = m.background[ij];
 					if currentTile != 0 {
 						let tileDef = &m.tileset.tiles[currentTile as __];
 						screen
@@ -120,8 +129,8 @@ impl<'a> MapIso<'a> {
 								&m.tileset.sprites,
 								tileDef.src,
 								Rect::new(
-									320 + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
-									240 + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
+									SCREEN_CENTER.x + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
+									SCREEN_CENTER.y + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
 									tileDef.src.width(),
 									tileDef.src.height(),
 								),
@@ -136,10 +145,10 @@ impl<'a> MapIso<'a> {
 		// todo: trim by screen rect
 		// object layer
 		{
-			let (mut ij, object) = (0, m.object.as_slice());
-			for j in 0..m.height as i32 {
-				for i in 0..m.width as i32 {
-					let currentTile = object[ij];
+			let (height, mut ij) = ((m.background.len() >> m.widthLog2) as i32, 0);
+			for j in 0..height {
+				for i in 0..width {
+					let currentTile = m.object[ij];
 					if currentTile != 0 {
 						let tileDef = &m.tileset.tiles[currentTile as __];
 						screen
@@ -147,8 +156,8 @@ impl<'a> MapIso<'a> {
 								&m.tileset.sprites,
 								tileDef.src,
 								Rect::new(
-									320 + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
-									240 + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
+									SCREEN_CENTER.x + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
+									SCREEN_CENTER.y + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
 									tileDef.src.width(),
 									tileDef.src.height(),
 								),
@@ -163,7 +172,12 @@ impl<'a> MapIso<'a> {
 							.copy(
 								r.sprite,
 								r.src,
-								Rect::new(320 - r.offset.x, 240 - r.offset.y, r.src.width(), r.src.height()),
+								Rect::new(
+									SCREEN_CENTER.x - r.offset.x,
+									SCREEN_CENTER.y - r.offset.y,
+									r.src.width(),
+									r.src.height(),
+								),
 							)
 							.unwrap();
 					}

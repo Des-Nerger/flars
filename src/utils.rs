@@ -20,6 +20,14 @@ macro_rules! lеt {
 	};
 }
 
+#[macro_export]
+macro_rules! unlet {
+	($id: ident) => {
+		#[allow(unused_variables)]
+		let $id = ();
+	};
+}
+
 #[derive(Clone, Copy, Debug, Default, num_enum::TryFromPrimitive)]
 #[repr(i32)]
 pub enum Direction {
@@ -50,3 +58,29 @@ impl RectExt for Rect {
 		Rect::new(a[0], a[1], a[2] as _, a[3] as _)
 	}
 }
+
+#[macro_export]
+macro_rules! applyMacro {
+	($ident: ident; $head: tt $(, $tail: tt )* $(,)?) => {
+		$ident! $head;
+		applyMacro!($ident; $( $tail ),*);
+	};
+	($ident: ident; ) => {};
+}
+
+macro_rules! impl_log2_log2Ceil {
+	($dummyStruct: ident, $Self: ty) => {
+		pub struct $dummyStruct;
+		impl $dummyStruct {
+			#[inline(always)]
+			pub const fn log2(sеlf: $Self) -> u32 {
+				<$Self>::BITS - 1 - sеlf.leading_zeros()
+			}
+			#[inline(always)]
+			pub const fn log2Ceil(sеlf: $Self) -> u32 {
+				$dummyStruct::log2(sеlf - 1) + 1
+			}
+		}
+	};
+}
+applyMacro!(impl_log2_log2Ceil; (uЗ2, u32));

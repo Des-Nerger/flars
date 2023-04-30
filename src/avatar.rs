@@ -41,8 +41,6 @@ pub struct Avatar<'a, 'map> {
 	curFrame: i32,
 	displayedFrame: i32,
 	animForward: bool,
-	hVSpeed: i32,
-	diagSpeed: i32,
 }
 
 impl<'a, 'map> Avatar<'a, 'map> {
@@ -68,9 +66,6 @@ impl<'a, 'map> Avatar<'a, 'map> {
 			displayedFrame: 0,
 			animForward: true,
 
-			hVSpeed: 6,
-			diagSpeed: 4,
-
 			sprites: textureCreator.load_texture("images/male_sprites.png").unwrap(),
 		}
 	}
@@ -81,6 +76,7 @@ impl<'a, 'map> Avatar<'a, 'map> {
 	}
 
 	pub fn mоve(&mut self) -> bool {
+		let isDiag = (self.direction as __) % 2 == 0;
 		self.map.borrow_mut().collider.mоve(
 			&mut self.pos,
 			IVec2::from_array(match self.direction {
@@ -93,7 +89,12 @@ impl<'a, 'map> Avatar<'a, 'map> {
 				CLOCK06_00 => [1, 1],
 				CLOCK07_30 => [0, 1],
 			}),
-			[self.diagSpeed, self.hVSpeed][(self.direction as __) % 2],
+			{
+				const DIAG_SPEED: i32 = 4;
+				const H_V_SPEED: i32 = 6;
+				[H_V_SPEED, DIAG_SPEED][isDiag as __]
+			},
+			isDiag,
 		)
 	}
 

@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 #![warn(clippy::pedantic, elided_lifetimes_in_paths, explicit_outlives_requirements)]
 #![allow(
 	confusable_idents,
@@ -12,6 +13,7 @@ mod collider;
 mod game_engine;
 mod input_state;
 mod map_iso;
+mod settings;
 mod tileset;
 mod utils;
 
@@ -25,33 +27,42 @@ use {
 };
 
 fn main() {
-	use {game_engine::*, input_state::*};
-
-	const FPS: u32 = 24;
-	let (delay, input, screen) = {
+	use {
+		game_engine::*,
+		input_state::*,
+		settings::{FPS, SCREEN_HEIGHT, SCREEN_WIDTH},
+	};
+	let (delay, screen, input) = {
 		let sdl2 = sdl2::init().unwrap();
 		(
 			Duration::from_secs(1) / FPS,
-			&RefCell::new(InputState::new(sdl2.event_pump().unwrap())),
 			&RefCell::new(
 				sdl2
 					.video()
 					.unwrap()
-					.window(&format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")), 640, 480)
+					.window(
+						&format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
+						SCREEN_WIDTH,
+						SCREEN_HEIGHT,
+					)
 					.position_centered()
+					.resizable()
 					.build()
 					.unwrap()
 					.into_canvas()
 					.build()
 					.unwrap(),
 			),
+			&RefCell::new(InputState::new(sdl2.event_pump().unwrap())),
 		)
 	};
 	lеt!(engine = &mut GameEngine::new(screen, input));
 	let mut nextFrame_instant = Instant::now() + delay;
 	{
 		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
-		screen.set_draw_color(Color::RGB(0x00, 0x00, 0x00));
+		screen.set_integer_scale(true).unwrap();
+		screen.set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT).unwrap();
+		screen.set_draw_color(Color::RGB(0xB, 0xB, 0xB));
 		loopIterationBeginning(screen, input);
 	}
 	fn loopIterationBeginning(screen: &mut RefMut<'_, Canvas<Window>>, input: &mut RefMut<'_, InputState>) {

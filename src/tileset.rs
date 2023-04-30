@@ -12,7 +12,7 @@ use {
 };
 
 pub struct Tileset<'a> {
-	pub tiles: Vec<TileDef>,
+	pub tiles: Box<[TileDef]>,
 	pub sprites: Texture<'a>,
 }
 
@@ -47,7 +47,10 @@ impl<'a> Tileset<'a> {
 				tiles[i] =
 					TileDef { src: Rect::new(srcX, srcY, srcWidth, srcHeight), offset: IVec2::new(offsetX, offsetY) }
 			}
-			return Self { tiles, sprites: textureCreator.load_texture(imagePath).unwrap() };
+			return Self {
+				tiles: tiles.into_boxed_slice(),
+				sprites: textureCreator.load_texture(imagePath).unwrap(),
+			};
 		}
 		unreachable!()
 	}

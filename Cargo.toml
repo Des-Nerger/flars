@@ -1,8 +1,15 @@
+[workspace]
+members = ["3rd-party/*"]
+
 [package]
 name = "flars"
-version = "0.0.2"
-license = "GPL-3.0"
+version = "0.1.0"
 edition = "2021"
+license = "GPL-3.0"
+authors = ["Des-Nerger <mixerator@rambler.ru>"]
+description = 'A reimplementation of "Free/Libre Action Roleplaying Engine" (FLARE) v0.0x'
+homepage = "https://github.com/Des-Nerger/flars"
+repository = "https://github.com/Des-Nerger/flars"
 
 [profile.release]
 strip = true
@@ -14,5 +21,5 @@ tiled-json-rs = "0.2"
 toml_edit = { version = "0.19", features = ["serde", "perf"] }
 glam = "0.22"
 num_enum = "0.5"
-ary = "0.1"
+ary = { path = "3rd-party/ary" }
 serde = { version = "1.0", features = ["derive"] }
