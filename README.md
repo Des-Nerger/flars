@@ -9,4 +9,5 @@ After that, the engine / game should be runnable using:
 ```sh
 $ cargo run --release
 ```
-[![youtu.be/@desnerger6346/flars v0.1.0](https://yt-embed.live/embed?v=ucm6wBaR9iI)](https://youtu.be/ucm6wBaR9iI "youtu.be/flars v0.1.0")
+A (clickable) YouTube demonstration:
+[![youtu.be/@desnerger6346/flars v0.1.0](https://img.youtube.com/vi/ucm6wBaR9iI/0.jpg)](https://youtu.be/ucm6wBaR9iI "youtu.be/flars v0.1.0")
