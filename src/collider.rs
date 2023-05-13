@@ -7,7 +7,7 @@
  */
 
 use {
-	crate::{settings::TILE_SHIFT, utils::__},
+	crate::{settings::UNITS_PER_TILE, utils::__},
 	glam::IVec2,
 };
 
@@ -49,6 +49,6 @@ impl Collider {
 	}
 
 	pub fn isEmpty(&self, x: i32, y: i32) -> bool {
-		self.colmap[((x >> TILE_SHIFT) + ((y >> TILE_SHIFT) << self.widthLog2)) as __] == 0
+		self.colmap[((x / UNITS_PER_TILE) + ((y / UNITS_PER_TILE) << self.widthLog2)) as __] == 0
 	}
 }

@@ -1,5 +1,5 @@
 use {
-	crate::utils::default,
+	crate::utils::{default, AtlasDef, AtlasDefsTOML},
 	glam::IVec2,
 	sdl2::{
 		image::LoadTexture,
@@ -7,31 +7,17 @@ use {
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
-	serde::Deserialize,
-	std::{collections::HashMap, fs},
+	std::fs,
 };
 
 pub struct Tileset<'a> {
-	pub tiles: Box<[TileDef]>,
-	pub sprites: Texture<'a>,
-}
-
-pub struct TileDef {
-	pub src: Rect,
-	pub offset: IVec2,
-}
-
-impl Default for TileDef {
-	fn default() -> Self {
-		Self { src: Rect::new(default(), default(), default(), default()), offset: default() }
-	}
+	pub tiles: Box<[AtlasDef]>,
+	pub image: Texture<'a>,
 }
 
 impl<'a> Tileset<'a> {
 	pub fn new(textureCreator: &'a TextureCreator<WindowContext>, tilesetPath: String) -> Self {
-		#[derive(Deserialize)]
-		struct TilesetTOML(HashMap<String, Vec<(usize, i32, i32, u32, u32, i32, i32)>>);
-		let iter = toml_edit::de::from_str::<TilesetTOML>(&fs::read_to_string(tilesetPath).unwrap())
+		let iter = toml_edit::de::from_str::<AtlasDefsTOML>(&fs::read_to_string(tilesetPath).unwrap())
 			.unwrap()
 			.0
 			.into_iter();
@@ -44,12 +30,14 @@ impl<'a> Tileset<'a> {
 				if i >= tiles.len() {
 					tiles.resize_with(i + 1, default);
 				}
-				tiles[i] =
-					TileDef { src: Rect::new(srcX, srcY, srcWidth, srcHeight), offset: IVec2::new(offsetX, offsetY) }
+				tiles[i] = AtlasDef {
+					src: Rect::new(srcX, srcY, srcWidth, srcHeight),
+					offset: IVec2::new(offsetX, offsetY),
+				};
 			}
 			return Self {
 				tiles: tiles.into_boxed_slice(),
-				sprites: textureCreator.load_texture(imagePath).unwrap(),
+				image: textureCreator.load_texture(imagePath).unwrap(),
 			};
 		}
 		unreachable!()

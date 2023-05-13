@@ -12,23 +12,23 @@ use {
 	sdl2::{render::TextureCreator, video::WindowContext},
 };
 
-pub struct GameEngine<'a, 'map> {
-	input: &'a RefCell<InputState>,
-	playerChar: Avatar<'a, 'map>,
-	map: &'map RefCell<MapIso<'a>>,
+pub struct GameEngine<'map, 'nonMap> {
+	input: &'nonMap RefCell<InputState>,
+	playerChar: Avatar<'map, 'nonMap>,
+	map: &'map RefCell<MapIso<'nonMap>>,
 	pub done: bool,
 }
 
-impl<'a, 'map> GameEngine<'a, 'map> {
+impl<'map, 'nonMap> GameEngine<'map, 'nonMap> {
 	/**
 	 * Not meant to be used directly, but rather through the [`lеt!(_ = &mut GameEngine::new(..))`] macro.
 	 *
 	 * [`lеt!(_ = &mut GameEngine::new(..))`]: crate::lеt
 	 */
 	pub fn new(
-		textureCreator: &'a TextureCreator<WindowContext>,
-		input: &'a RefCell<InputState>,
-		map: &'map RefCell<MapIso<'a>>,
+		textureCreator: &'nonMap TextureCreator<WindowContext>,
+		input: &'nonMap RefCell<InputState>,
+		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
 		GameEngine { input, playerChar: Avatar::new(textureCreator, input, map), map, done: false }
 	}

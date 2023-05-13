@@ -11,18 +11,21 @@ use {
 		input_state::{InputCommand::*, *},
 		map_iso::*,
 		utils::{
+			default, AtlasDef, AtlasDefsTOML,
 			Direction::{self, *},
-			RectExt, Renderable, __,
+			LenConst_Ext, Renderable, __,
 		},
 	},
 	core::cell::RefCell,
-	glam::{IVec2, IVec4},
+	glam::IVec2,
 	sdl2::{
 		image::LoadTexture,
 		rect::Rect,
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
+	std::fs,
+	strum::EnumCount,
 };
 
 enum AvatarState {
@@ -30,10 +33,14 @@ enum AvatarState {
 	RUN,
 }
 
-pub struct Avatar<'a, 'map> {
-	sprites: Texture<'a>,
-	input: &'a RefCell<InputState>,
-	map: &'map RefCell<MapIso<'a>>,
+const FRAME_COUNT: usize = 32;
+type Sprites = [AtlasDef; Direction::COUNT * FRAME_COUNT];
+
+pub struct Avatar<'map, 'nonMap> {
+	sprites: Sprites,
+	image: Texture<'nonMap>,
+	input: &'nonMap RefCell<InputState>,
+	map: &'map RefCell<MapIso<'nonMap>>,
 
 	curState: AvatarState,
 	pos: IVec2,
@@ -43,31 +50,49 @@ pub struct Avatar<'a, 'map> {
 	animForward: bool,
 }
 
-impl<'a, 'map> Avatar<'a, 'map> {
+impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 	pub fn new(
-		textureCreator: &'a TextureCreator<WindowContext>,
-		input: &'a RefCell<InputState>,
-		map: &'map RefCell<MapIso<'a>>,
+		textureCreator: &'nonMap TextureCreator<WindowContext>,
+		input: &'nonMap RefCell<InputState>,
+		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
-		let mаp;
-		Self {
-			input,
-			map,
+		let iter = toml_edit::de::from_str::<AtlasDefsTOML>(
+			&fs::read_to_string("atlas-defs/male-sprites.toml").unwrap(),
+		)
+		.unwrap()
+		.0
+		.into_iter();
+		assert_eq!(iter.size_hint(), (1, Some(1)));
+		for (imagePath, vec) in iter {
+			let mut sprites = [default(); Sprites::LEN];
+			for (i, srcX, srcY, srcWidth, srcHeight, offsetX, offsetY) in vec.into_iter() {
+				sprites[i] = AtlasDef {
+					src: Rect::new(srcX, srcY, srcWidth, srcHeight),
+					offset: IVec2::new(offsetX, offsetY),
+				};
+			}
+			let mаp;
+			return Self {
+				input,
+				map,
 
-			// other init
-			curState: AvatarState::STANCE,
-			pos: {
-				mаp = map.borrow();
-				mаp.spawn
-			},
-			direction: mаp.spawnDirection,
+				// other init
+				curState: AvatarState::STANCE,
+				pos: {
+					mаp = map.borrow();
+					mаp.spawn
+				},
+				direction: mаp.spawnDirection,
 
-			curFrame: 1,
-			displayedFrame: 0,
-			animForward: true,
+				curFrame: 1,
+				displayedFrame: 0,
+				animForward: true,
 
-			sprites: textureCreator.load_texture("images/male_sprites.png").unwrap(),
+				sprites,
+				image: textureCreator.load_texture(imagePath).unwrap(),
+			};
 		}
+		unreachable!()
 	}
 
 	pub fn pressingMove(&self) -> bool {
@@ -123,23 +148,21 @@ impl<'a, 'map> Avatar<'a, 'map> {
 		use AvatarState::*;
 		match a.curState {
 			STANCE => {
-				loop {
+				(|| {
 					(a.curFrame, a.animForward) = if a.animForward {
 						a.curFrame += 1;
-						if a.curFrame >= 24 {
-							(23, false)
-						} else {
-							break;
+						if a.curFrame <= 23 {
+							return;
 						}
+						(23, false)
 					} else {
 						a.curFrame -= 1;
-						if a.curFrame <= -1 {
-							(0, true)
-						} else {
-							break;
+						if a.curFrame >= 0 {
+							return;
 						}
+						(0, true)
 					};
-				}
+				})();
 				a.displayedFrame = a.curFrame / 6;
 
 				// handle transitions to RUN
@@ -161,15 +184,14 @@ impl<'a, 'map> Avatar<'a, 'map> {
 				a.setDirection();
 
 				// handle transition to STANCE
-				loop {
+				(|| {
 					if !a.pressingMove() {
 					} else if !a.mоve() {
 					} else {
-						break;
+						return;
 					};
 					a.curState = STANCE;
-					break;
-				}
+				})();
 			}
 		}
 
@@ -179,11 +201,8 @@ impl<'a, 'map> Avatar<'a, 'map> {
 	}
 
 	pub fn getRender(&self) -> Renderable<'_> {
-		Renderable {
-			mapPos: self.pos,
-			sprite: &self.sprites,
-			src: Rect::fromArray((128 * IVec4::new(self.displayedFrame, self.direction as _, 1, 1)).to_array()),
-			offset: IVec2::new(64, 112),
-		}
+		let AtlasDef { src, offset } =
+			self.sprites[self.direction as __ * FRAME_COUNT + self.displayedFrame as __];
+		Renderable { mapPos: self.pos, image: &self.image, src, offset }
 	}
 }

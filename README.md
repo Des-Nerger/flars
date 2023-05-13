@@ -6,7 +6,7 @@ For instance, in Debian / Ubuntu this can be done with:
 $ sudo apt install libsdl2{,-image}-dev
 ```
 After that, the engine / game should be runnable using:
-```bash
+```sh
 $ cargo run --release
 ```
 [![youtu.be/@desnerger6346/flars v0.1.0](https://yt-embed.live/embed?v=ucm6wBaR9iI)](https://youtu.be/ucm6wBaR9iI "youtu.be/flars v0.1.0")

@@ -1,10 +1,10 @@
 use {
 	crate::{
 		collider::*,
-		settings::SCREEN_CENTER,
+		settings::{SCREEN_CENTER, TILE_HEIGHT_HALF, TILE_WIDTH_HALF, UNITS_PER_TILE},
 		tileset::*,
 		unlet,
-		utils::{default, uЗ2, Direction, Renderable, __},
+		utils::{default, uЗ2, Direction, RectExt, Renderable, __},
 	},
 	core::{array, cell::RefCell, iter, str::FromStr},
 	glam::IVec2,
@@ -53,7 +53,7 @@ impl<'a> MapIso<'a> {
 				"spawnpoint" => {
 					let mut iter = value.split(',').map(|s| i32::from_str(s).unwrap());
 					spawn = IVec2::from_array(array::from_fn(|_| iter.next().unwrap()));
-					spawnDirection = Direction::try_from(iter.next().unwrap()).unwrap();
+					spawnDirection = Direction::from_repr(iter.next().unwrap()).unwrap();
 					assert_eq!(iter.next(), None);
 				}
 				"tileset" => {
@@ -91,7 +91,6 @@ impl<'a> MapIso<'a> {
 			screen,
 			widthLog2: widthLog2Ceil,
 			// cam(x,y) is where on the map the camera is pointing
-			// units = 32
 			cam: default(),
 			spawn,
 			spawnDirection,
@@ -113,77 +112,74 @@ impl<'a> MapIso<'a> {
 		// check to see if it's time to draw the next renderable yet.
 
 		let m /*apIso */ = self;
-		let (width, screen) = (1 << m.widthLog2, &mut m.screen.borrow_mut());
+		let (width, height, screen, [x0, y0]) = (
+			1 << m.widthLog2,
+			(m.background.len() >> m.widthLog2) as i32,
+			&mut m.screen.borrow_mut(),
+			[SCREEN_CENTER.x - (m.cam.x - m.cam.y), SCREEN_CENTER.y - ((m.cam.x + m.cam.y) / 2)],
+		);
+		const NO_TILE: u32 = 0;
 
 		// todo: trim by screen rect
 		// background
 		{
-			let (height, mut ij) = ((m.background.len() >> m.widthLog2) as i32, 0);
-			for j in 0..height {
-				for i in 0..width {
-					let currentTile = m.background[ij];
-					if currentTile != 0 {
-						let tileDef = &m.tileset.tiles[currentTile as __];
-						screen
-							.copy(
-								&m.tileset.sprites,
-								tileDef.src,
-								Rect::new(
-									SCREEN_CENTER.x + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
-									SCREEN_CENTER.y + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
-									tileDef.src.width(),
-									tileDef.src.height(),
-								),
-							)
-							.unwrap();
+			let (mut ij, mut pos) = (0, IVec2::new(x0, y0));
+			for _j in 0..height {
+				{
+					let mut pos = pos;
+					for _i in 0..width {
+						let currentTile = m.background[ij];
+						if currentTile != NO_TILE {
+							let tileDef = &m.tileset.tiles[currentTile as __];
+							screen
+								.copy(
+									&m.tileset.image,
+									tileDef.src,
+									Rect::fromIVec2s(pos - tileDef.offset, tileDef.src.dimensions()),
+								)
+								.unwrap();
+						}
+						ij += 1;
+						pos += IVec2::new(TILE_WIDTH_HALF, TILE_HEIGHT_HALF);
 					}
-					ij += 1;
 				}
+				pos += IVec2::new(-TILE_WIDTH_HALF, TILE_HEIGHT_HALF);
 			}
 		}
 
 		// todo: trim by screen rect
 		// object layer
 		{
-			let (height, mut ij) = ((m.background.len() >> m.widthLog2) as i32, 0);
+			let (mut ij, mut pos) = (0, IVec2::new(x0, y0));
 			for j in 0..height {
-				for i in 0..width {
-					let currentTile = m.object[ij];
-					if currentTile != 0 {
-						let tileDef = &m.tileset.tiles[currentTile as __];
-						screen
-							.copy(
-								&m.tileset.sprites,
-								tileDef.src,
-								Rect::new(
-									SCREEN_CENTER.x + (i * 32 - m.cam.x) - (j * 32 - m.cam.y) - tileDef.offset.x,
-									SCREEN_CENTER.y + (i * 16 - (m.cam.x / 2)) + (j * 16 - (m.cam.y / 2)) - tileDef.offset.y,
-									tileDef.src.width(),
-									tileDef.src.height(),
-								),
-							)
-							.unwrap();
-					}
+				{
+					let mut pos = pos;
+					for i in 0..width {
+						let currentTile = m.object[ij];
+						if currentTile != NO_TILE {
+							let tileDef = &m.tileset.tiles[currentTile as __];
+							screen
+								.copy(
+									&m.tileset.image,
+									tileDef.src,
+									Rect::fromIVec2s(pos - tileDef.offset, tileDef.src.dimensions()),
+								)
+								.unwrap();
+						}
 
-					// entities go in this layer
-					if r.mapPos.x / 32 == i && r.mapPos.y / 32 == j {
-						// draw renderable
-						screen
-							.copy(
-								r.sprite,
-								r.src,
-								Rect::new(
-									SCREEN_CENTER.x - r.offset.x,
-									SCREEN_CENTER.y - r.offset.y,
-									r.src.width(),
-									r.src.height(),
-								),
-							)
-							.unwrap();
-					}
+						// entities go in this layer
+						if r.mapPos / UNITS_PER_TILE == IVec2::new(i, j) {
+							// draw renderable
+							screen
+								.copy(r.image, r.src, Rect::fromIVec2s(SCREEN_CENTER - r.offset, r.src.dimensions()))
+								.unwrap();
+						}
 
-					ij += 1;
+						ij += 1;
+						pos += IVec2::new(TILE_WIDTH_HALF, TILE_HEIGHT_HALF);
+					}
 				}
+				pos += IVec2::new(-TILE_WIDTH_HALF, TILE_HEIGHT_HALF);
 			}
 		}
 	}

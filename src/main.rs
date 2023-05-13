@@ -62,7 +62,7 @@ fn main() {
 		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
 		screen.set_integer_scale(true).unwrap();
 		screen.set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT).unwrap();
-		screen.set_draw_color(Color::RGB(0xB, 0xB, 0xB));
+		screen.set_draw_color(Color::RGB(0xC, 0xC, 0xC));
 		loopIterationBeginning(screen, input);
 	}
 	fn loopIterationBeginning(screen: &mut RefMut<'_, Canvas<Window>>, input: &mut RefMut<'_, InputState>) {

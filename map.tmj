@@ -45,12 +45,12 @@
         {
          "name":"#id",
          "type":"string",
-         "value":"averguard_atrium"
+         "value":"averguard-atrium"
         }, 
         {
          "name":"#music",
          "type":"string",
-         "value":"overworld_theme.ogg"
+         "value":"overworld-theme.ogg"
         }, 
         {
          "name":"spawnpoint",
@@ -60,7 +60,7 @@
         {
          "name":"tileset",
          "type":"string",
-         "value":"tileset_dungeon.toml"
+         "value":"atlas-defs/tileset-dungeon.toml"
         }],
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
@@ -69,7 +69,7 @@
         {
          "columns":15,
          "firstgid":1,
-         "image":"tiled\/tiled_collision.png",
+         "image":"tiled\/tiled-collision.png",
          "imageheight":32,
          "imagewidth":960,
          "margin":0,
@@ -82,7 +82,7 @@
         {
          "columns":16,
          "firstgid":16,
-         "image":"tiled\/tiled_dungeon.png",
+         "image":"tiled\/tiled-dungeon.png",
          "imageheight":1920,
          "imagewidth":1024,
          "margin":0,

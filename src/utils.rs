@@ -1,6 +1,9 @@
 use {
 	glam::IVec2,
 	sdl2::{rect::Rect, render::Texture},
+	serde::Deserialize,
+	std::collections::HashMap,
+	strum::{EnumCount, FromRepr},
 };
 
 pub type __ = usize;
@@ -28,7 +31,7 @@ macro_rules! unlet {
 	};
 }
 
-#[derive(Clone, Copy, Debug, Default, num_enum::TryFromPrimitive)]
+#[derive(Clone, Copy, Debug, Default, EnumCount, FromRepr)]
 #[repr(i32)]
 pub enum Direction {
 	#[default]
@@ -44,19 +47,52 @@ pub enum Direction {
 
 pub struct Renderable<'a> {
 	pub mapPos: IVec2,
-	pub sprite: &'a Texture<'a>,
+	pub image: &'a Texture<'a>,
 	pub src: Rect,
 	pub offset: IVec2,
 }
 
+#[derive(Clone, Copy)]
+pub struct AtlasDef {
+	pub src: Rect,
+	pub offset: IVec2,
+}
+impl Default for AtlasDef {
+	fn default() -> Self {
+		Self { src: Rect::new(default(), default(), default(), default()), offset: default() }
+	}
+}
+
+#[derive(Deserialize)]
+pub struct AtlasDefsTOML(pub HashMap<String, Vec<(usize, i32, i32, u32, u32, i32, i32)>>);
+
 pub trait RectExt {
 	fn fromArray(_: [i32; 4]) -> Self;
+	fn fromIVec2s(pos: IVec2, dimensions: IVec2) -> Self;
+	fn dimensions(&self) -> IVec2;
 }
 impl RectExt for Rect {
 	#[inline(always)]
 	fn fromArray(a /*rray */: [i32; 4]) -> Self {
-		Rect::new(a[0], a[1], a[2] as _, a[3] as _)
+		Self::new(a[0], a[1], a[2] as _, a[3] as _)
 	}
+	#[inline(always)]
+	fn fromIVec2s(pos: IVec2, dimensions: IVec2) -> Self {
+		let ([x, y], [width, height]) = (pos.to_array(), dimensions.to_array());
+		Self::new(x, y, width as _, height as _)
+	}
+	#[inline(always)]
+	fn dimensions(&self) -> IVec2 {
+		IVec2::new(self.width() as _, self.height() as _)
+	}
+}
+
+#[allow(non_camel_case_types)]
+pub trait LenConst_Ext {
+	const LEN: usize;
+}
+impl<T, const N: usize> LenConst_Ext for [T; N] {
+	const LEN: usize = N;
 }
 
 #[macro_export]

@@ -1,9 +1,9 @@
 [workspace]
-members = ["3rd-party/*"]
+members = ["third-party/*"]
 
 [package]
 name = "flars"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "GPL-3.0"
 authors = ["Des-Nerger <mixerator@rambler.ru>"]
@@ -20,6 +20,7 @@ sdl2 = { version = "0.35", features = ["image"] }
 tiled-json-rs = "0.2"
 toml_edit = { version = "0.19", features = ["serde", "perf"] }
 glam = "0.22"
-num_enum = "0.5"
-ary = { path = "3rd-party/ary" }
+strum = { version = "0.24", features = ["derive"] }
+ary = { path = "third-party/ary" }
 serde = { version = "1.0", features = ["derive"] }
+winnow = "= 0.4.1"
