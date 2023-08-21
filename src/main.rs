@@ -19,7 +19,7 @@ mod utils;
 
 use {
 	core::cell::{RefCell, RefMut},
-	sdl2::{pixels::Color, render::Canvas, video::Window},
+	sdl2::pixels::Color,
 	std::{
 		thread,
 		time::{Duration, Instant},
@@ -36,50 +36,55 @@ fn main() {
 		let sdl2 = sdl2::init().unwrap();
 		(
 			Duration::from_secs(1) / FPS,
-			&RefCell::new(
-				sdl2
-					.video()
-					.unwrap()
-					.window(
-						&format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
-						SCREEN_WIDTH,
-						SCREEN_HEIGHT,
-					)
-					.position_centered()
-					.resizable()
-					.build()
-					.unwrap()
-					.into_canvas()
-					.build()
-					.unwrap(),
-			),
+			&mut sdl2
+				.video()
+				.unwrap()
+				.window(
+					&format!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")),
+					SCREEN_WIDTH,
+					SCREEN_HEIGHT,
+				)
+				.position_centered()
+				.resizable()
+				.build()
+				.unwrap()
+				.into_canvas()
+				.build()
+				.unwrap(),
 			&RefCell::new(InputState::new(sdl2.event_pump().unwrap())),
 		)
 	};
-	lеt!(engine = &mut GameEngine::new(screen, input));
+	screen.set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT).unwrap();
+	screen.set_draw_color(Color::RGB(0xC, 0xC, 0xC));
+	let textureCreator = &screen.texture_creator();
+	sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "1");
+	let screenTexture = &mut textureCreator
+		.create_texture_target(textureCreator.default_pixel_format(), SCREEN_WIDTH, SCREEN_HEIGHT)
+		.unwrap();
+	sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "0");
+	lеt!(engine = &mut GameEngine::new(textureCreator, input));
+	unlet!(textureCreator);
 	let mut nextFrame_instant = Instant::now() + delay;
-	{
-		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
-		screen.set_integer_scale(true).unwrap();
-		screen.set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT).unwrap();
-		screen.set_draw_color(Color::RGB(0xC, 0xC, 0xC));
-		loopIterationBeginning(screen, input);
-	}
-	fn loopIterationBeginning(screen: &mut RefMut<'_, Canvas<Window>>, input: &mut RefMut<'_, InputState>) {
-		// black out
-		screen.clear();
-
+	loopIterationBeginning(&mut input.borrow_mut());
+	fn loopIterationBeginning(input: &mut RefMut<'_, InputState>) {
 		input.handle();
 	}
 	loop {
 		engine.logic();
-		engine.render();
+		screen
+			.with_texture_canvas(screenTexture, |screen| {
+				screen.clear();
+				engine.render(screen);
+			})
+			.unwrap();
+		screen.clear();
+		screen.copy(screenTexture, None, None).unwrap();
 
 		thread::sleep(nextFrame_instant - Instant::now());
 		nextFrame_instant += delay;
 
-		let (screen, input) = &mut (screen.borrow_mut(), input.borrow_mut());
 		screen.present();
+		let input = &mut input.borrow_mut();
 
 		// Engine done means the user escapes the main game menu.
 		// Input done means the user closes the window.
@@ -89,6 +94,6 @@ fn main() {
 			break;
 		}
 
-		loopIterationBeginning(screen, input);
+		loopIterationBeginning(input);
 	}
 }

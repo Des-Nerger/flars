@@ -11,7 +11,7 @@ use {
 		input_state::{InputCommand::*, *},
 		map_iso::*,
 		utils::{
-			default, AtlasDef, AtlasDefsTOML,
+			default, AtlasDefTOML, AtlasRegion,
 			Direction::{self, *},
 			LenConst_Ext, Renderable, __,
 		},
@@ -34,7 +34,7 @@ enum AvatarState {
 }
 
 const FRAME_COUNT: usize = 32;
-type Sprites = [AtlasDef; Direction::COUNT * FRAME_COUNT];
+type Sprites = [AtlasRegion; Direction::COUNT * FRAME_COUNT];
 
 pub struct Avatar<'map, 'nonMap> {
 	sprites: Sprites,
@@ -56,7 +56,7 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 		input: &'nonMap RefCell<InputState>,
 		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
-		let iter = toml_edit::de::from_str::<AtlasDefsTOML>(
+		let iter = toml_edit::de::from_str::<AtlasDefTOML>(
 			&fs::read_to_string("atlas-defs/male-sprites.toml").unwrap(),
 		)
 		.unwrap()
@@ -66,7 +66,7 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 		for (imagePath, vec) in iter {
 			let mut sprites = [default(); Sprites::LEN];
 			for (i, srcX, srcY, srcWidth, srcHeight, offsetX, offsetY) in vec.into_iter() {
-				sprites[i] = AtlasDef {
+				sprites[i] = AtlasRegion {
 					src: Rect::new(srcX, srcY, srcWidth, srcHeight),
 					offset: IVec2::new(offsetX, offsetY),
 				};
@@ -201,7 +201,7 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 	}
 
 	pub fn getRender(&self) -> Renderable<'_> {
-		let AtlasDef { src, offset } =
+		let AtlasRegion { src, offset } =
 			self.sprites[self.direction as __ * FRAME_COUNT + self.displayedFrame as __];
 		Renderable { mapPos: self.pos, image: &self.image, src, offset }
 	}

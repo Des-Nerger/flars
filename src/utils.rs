@@ -15,11 +15,10 @@ pub fn default<T: Default>() -> T {
 
 #[macro_export]
 macro_rules! lеt {
-	($engine: ident = &mut GameEngine::new($screen: ident, $input: ident)) => {
+	($engine: ident = &mut GameEngine::new($textureCreator: ident, $input: ident)) => {
 		use crate::map_iso::*;
-		let textureCreator = &$screen.borrow().texture_creator();
-		let map = &RefCell::new(MapIso::new($screen, textureCreator));
-		let $engine = &mut GameEngine::new(textureCreator, $input, map);
+		let map = &RefCell::new(MapIso::new($textureCreator));
+		let $engine = &mut GameEngine::new($textureCreator, $input, map);
 	};
 }
 
@@ -53,18 +52,18 @@ pub struct Renderable<'a> {
 }
 
 #[derive(Clone, Copy)]
-pub struct AtlasDef {
+pub struct AtlasRegion {
 	pub src: Rect,
 	pub offset: IVec2,
 }
-impl Default for AtlasDef {
+impl Default for AtlasRegion {
 	fn default() -> Self {
 		Self { src: Rect::new(default(), default(), default(), default()), offset: default() }
 	}
 }
 
 #[derive(Deserialize)]
-pub struct AtlasDefsTOML(pub HashMap<String, Vec<(usize, i32, i32, u32, u32, i32, i32)>>);
+pub struct AtlasDefTOML(pub HashMap<String, Vec<(usize, i32, i32, u32, u32, i32, i32)>>);
 
 pub trait RectExt {
 	fn fromArray(_: [i32; 4]) -> Self;

@@ -9,7 +9,10 @@
 use {
 	crate::{avatar::*, input_state::*, map_iso::*, utils::__},
 	core::cell::RefCell,
-	sdl2::{render::TextureCreator, video::WindowContext},
+	sdl2::{
+		render::{Canvas, TextureCreator},
+		video::{Window, WindowContext},
+	},
 };
 
 pub struct GameEngine<'map, 'nonMap> {
@@ -48,9 +51,9 @@ impl<'map, 'nonMap> GameEngine<'map, 'nonMap> {
 	/**
 	 * Render all graphics for a single frame
 	 */
-	pub fn render(&self) {
+	pub fn render(&self, screen: &mut Canvas<Window>) {
 		// The strategy here is to make a list of Renderables from all objects not already on the map.
 		// Pass this list/array to the map, which will draw them inline with the map tiles/objects.
-		self.map.borrow_mut().render(self.playerChar.getRender());
+		self.map.borrow_mut().render(screen, self.playerChar.getRender());
 	}
 }

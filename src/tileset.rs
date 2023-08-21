@@ -1,5 +1,5 @@
 use {
-	crate::utils::{default, AtlasDef, AtlasDefsTOML},
+	crate::utils::{default, AtlasDefTOML, AtlasRegion},
 	glam::IVec2,
 	sdl2::{
 		image::LoadTexture,
@@ -11,13 +11,13 @@ use {
 };
 
 pub struct Tileset<'a> {
-	pub tiles: Box<[AtlasDef]>,
+	pub tiles: Box<[AtlasRegion]>,
 	pub image: Texture<'a>,
 }
 
 impl<'a> Tileset<'a> {
 	pub fn new(textureCreator: &'a TextureCreator<WindowContext>, tilesetPath: String) -> Self {
-		let iter = toml_edit::de::from_str::<AtlasDefsTOML>(&fs::read_to_string(tilesetPath).unwrap())
+		let iter = toml_edit::de::from_str::<AtlasDefTOML>(&fs::read_to_string(tilesetPath).unwrap())
 			.unwrap()
 			.0
 			.into_iter();
@@ -30,7 +30,7 @@ impl<'a> Tileset<'a> {
 				if i >= tiles.len() {
 					tiles.resize_with(i + 1, default);
 				}
-				tiles[i] = AtlasDef {
+				tiles[i] = AtlasRegion {
 					src: Rect::new(srcX, srcY, srcWidth, srcHeight),
 					offset: IVec2::new(offsetX, offsetY),
 				};

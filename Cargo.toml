@@ -3,7 +3,7 @@ members = ["third-party/*"]
 
 [package]
 name = "flars"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "GPL-3.0"
 authors = ["Des-Nerger <mixerator@rambler.ru>"]
@@ -13,7 +13,7 @@ repository = "https://github.com/Des-Nerger/flars"
 
 [profile.release]
 strip = true
-#lto = true
+# lto = true
 
 [dependencies]
 sdl2 = { version = "0.35", features = ["image"] }
@@ -23,4 +23,4 @@ glam = "0.22"
 strum = { version = "0.24", features = ["derive"] }
 ary = { path = "third-party/ary" }
 serde = { version = "1.0", features = ["derive"] }
-winnow = "= 0.4.1"
+

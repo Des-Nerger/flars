@@ -6,7 +6,7 @@ use {
 		unlet,
 		utils::{default, uЗ2, Direction, RectExt, Renderable, __},
 	},
-	core::{array, cell::RefCell, iter, str::FromStr},
+	core::{array, iter, str::FromStr},
 	glam::IVec2,
 	sdl2::{
 		rect::Rect,
@@ -17,8 +17,6 @@ use {
 };
 
 pub struct MapIso<'a> {
-	screen: &'a RefCell<Canvas<Window>>,
-
 	pub widthLog2: u32,
 	pub cam: IVec2,
 	pub spawn: IVec2,
@@ -31,16 +29,13 @@ pub struct MapIso<'a> {
 }
 
 impl<'a> MapIso<'a> {
-	pub fn new(
-		screen: &'a RefCell<Canvas<Window>>,
-		textureCreator: &'a TextureCreator<WindowContext>,
-	) -> Self {
+	pub fn new(textureCreator: &'a TextureCreator<WindowContext>) -> Self {
 		let (
 			mut spawn,
 			mut spawnDirection,
 			mut tilesetPath,
 			tiled::Map { width, height, properties, layers, .. },
-		) = (default(), default(), default(), tiled::Map::load_from_file("map.tmj".as_ref()).unwrap());
+		) = (default(), default(), default(), tiled::Map::load_from_file("map.tiled.json".as_ref()).unwrap());
 		let widthLog2Ceil = uЗ2::log2Ceil(width);
 		for (key, value) in properties.into_iter().filter_map(|(key, value)| {
 			if let TiledValue::String(value) = value {
@@ -88,7 +83,6 @@ impl<'a> MapIso<'a> {
 			}
 		}
 		Self {
-			screen,
 			widthLog2: widthLog2Ceil,
 			// cam(x,y) is where on the map the camera is pointing
 			cam: default(),
@@ -101,7 +95,7 @@ impl<'a> MapIso<'a> {
 		}
 	}
 
-	pub fn render(&mut self, r: Renderable<'_>) {
+	pub fn render(&mut self, screen: &mut Canvas<Window>, r: Renderable<'_>) {
 		// r will become a list of renderables.  Everything not on the map already:
 		// - hero
 		// - npcs and monsters
@@ -112,10 +106,9 @@ impl<'a> MapIso<'a> {
 		// check to see if it's time to draw the next renderable yet.
 
 		let m /*apIso */ = self;
-		let (width, height, screen, [x0, y0]) = (
+		let (width, height, [x0, y0]) = (
 			1 << m.widthLog2,
 			(m.background.len() >> m.widthLog2) as i32,
-			&mut m.screen.borrow_mut(),
 			[SCREEN_CENTER.x - (m.cam.x - m.cam.y), SCREEN_CENTER.y - ((m.cam.x + m.cam.y) / 2)],
 		);
 		const NO_TILE: u32 = 0;
