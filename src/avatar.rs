@@ -20,7 +20,7 @@ use {
 	glam::IVec2,
 	sdl2::{
 		image::LoadTexture,
-		rect::Rect,
+		rect::{FPoint, Rect},
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
@@ -64,11 +64,29 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 		.into_iter();
 		assert_eq!(iter.size_hint(), (1, Some(1)));
 		for (imagePath, vec) in iter {
-			let mut sprites = [default(); Sprites::LEN];
+			let (image, mut sprites) =
+				(textureCreator.load_texture(imagePath).unwrap(), [default(); Sprites::LEN]);
+			let [invImageWidth, invImageHeight] = {
+				let query = image.query();
+				[1. / (query.width as f32), 1. / (query.height as f32)]
+			};
 			for (i, srcX, srcY, srcWidth, srcHeight, offsetX, offsetY) in vec.into_iter() {
+				let src = Rect::new(srcX, srcY, srcWidth, srcHeight);
+				let normSrc = (
+					(srcX as f32) * invImageWidth,
+					(srcY as f32) * invImageHeight,
+					(srcWidth as f32) * invImageWidth - f32::EPSILON,
+					(srcHeight as f32) * invImageHeight - f32::EPSILON,
+				);
 				sprites[i] = AtlasRegion {
-					src: Rect::new(srcX, srcY, srcWidth, srcHeight),
+					src,
 					offset: IVec2::new(offsetX, offsetY),
+					texCoords: [
+						FPoint::new(normSrc.0, normSrc.1),
+						FPoint::new(normSrc.0 + normSrc.2, normSrc.1),
+						FPoint::new(normSrc.0, normSrc.1 + normSrc.3),
+						FPoint::new(normSrc.0 + normSrc.2, normSrc.1 + normSrc.3),
+					],
 				};
 			}
 			let mаp;
@@ -89,7 +107,7 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 				animForward: true,
 
 				sprites,
-				image: textureCreator.load_texture(imagePath).unwrap(),
+				image,
 			};
 		}
 		unreachable!()
@@ -201,8 +219,10 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 	}
 
 	pub fn getRender(&self) -> Renderable<'_> {
-		let AtlasRegion { src, offset } =
-			self.sprites[self.direction as __ * FRAME_COUNT + self.displayedFrame as __];
-		Renderable { mapPos: self.pos, image: &self.image, src, offset }
+		Renderable {
+			mapPos: self.pos,
+			image: &self.image,
+			atlasRegion: &self.sprites[self.direction as __ * FRAME_COUNT + self.displayedFrame as __],
+		}
 	}
 }

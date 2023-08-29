@@ -19,7 +19,7 @@ mod utils;
 
 use {
 	core::cell::{RefCell, RefMut},
-	sdl2::pixels::Color,
+	sdl2::pixels::RColor,
 	std::{
 		thread,
 		time::{Duration, Instant},
@@ -55,7 +55,7 @@ fn main() {
 		)
 	};
 	screen.set_logical_size(SCREEN_WIDTH, SCREEN_HEIGHT).unwrap();
-	screen.set_draw_color(Color::RGB(0xC, 0xC, 0xC));
+	screen.set_draw_color(RColor::RGB(0xC, 0xC, 0xC));
 	let textureCreator = &screen.texture_creator();
 	sdl2::hint::set("SDL_RENDER_SCALE_QUALITY", "1");
 	let screenTexture = &mut textureCreator

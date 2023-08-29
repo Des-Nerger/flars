@@ -3,7 +3,7 @@ members = ["third-party/*"]
 
 [package]
 name = "flars"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 license = "GPL-3.0"
 authors = ["Des-Nerger <mixerator@rambler.ru>"]
@@ -16,7 +16,6 @@ strip = true
 # lto = true
 
 [dependencies]
-sdl2 = { version = "0.35", features = ["image"] }
 tiled-json-rs = "0.2"
 toml_edit = { version = "0.19", features = ["serde", "perf"] }
 glam = "0.22"
@@ -24,3 +23,7 @@ strum = { version = "0.24", features = ["derive"] }
 ary = { path = "third-party/ary" }
 serde = { version = "1.0", features = ["derive"] }
 
+[dependencies.sdl2]
+git = "https://github.com/moralrecordings/rust-sdl2"
+branch = "renderer_update"
+features = ["image"]
