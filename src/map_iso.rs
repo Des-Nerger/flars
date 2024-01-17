@@ -4,7 +4,7 @@ use {
 		settings::{SCREEN_CENTER, TILE_HEIGHT_HALF, TILE_WIDTH_HALF, UNITS_PER_TILE},
 		tileset::*,
 		unlet,
-		utils::{default, uЗ2, AtlasRegion, Direction, Intо, RectExt, Renderable, __},
+		utils::{default, uЗ2, AtlasRegion, Direction, Intо, Renderable, __},
 	},
 	core::{array, iter, str::FromStr},
 	glam::IVec2,
@@ -37,14 +37,10 @@ trait VerticesVecExt {
 
 impl VerticesVecExt for Vec<Vertex> {
 	fn pushRect(&mut self, atlasRegion: &AtlasRegion, pos: IVec2) {
-		let tileDimensions = atlasRegion.src.dimensions();
-		let offsetPos = pos - atlasRegion.offset;
-		self.extend_from_slice(&[
-			Vertex::new(offsetPos.intо(), WHITE, atlasRegion.texCoords[0]),
-			Vertex::new((offsetPos + IVec2::new(tileDimensions.x, 0)).intо(), WHITE, atlasRegion.texCoords[1]),
-			Vertex::new((offsetPos + IVec2::new(0, tileDimensions.y)).intо(), WHITE, atlasRegion.texCoords[2]),
-			Vertex::new((offsetPos + tileDimensions).intо(), WHITE, atlasRegion.texCoords[3]),
-		]);
+		self.extend(
+			(0..4)
+				.map(|i| Vertex::new((pos - atlasRegion.vertexOffsets[i]).intо(), WHITE, atlasRegion.texCoords[i])),
+		);
 	}
 }
 
@@ -214,9 +210,7 @@ impl<'a> MapIso<'a> {
 		}
 
 		m.vertIndicesBuf.ensureCount(vertIndicesCount);
-		screen
-			.geometry(&m.tileset.image, &m.verticesBuf, Some(&m.vertIndicesBuf[..vertIndicesCount]))
-			.unwrap();
+		screen.geometry(&m.tileset.image, &m.verticesBuf, Some(&m.vertIndicesBuf[..vertIndicesCount])).unwrap();
 		m.verticesBuf.clear();
 	}
 }

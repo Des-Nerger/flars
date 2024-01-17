@@ -17,10 +17,9 @@ use {
 		},
 	},
 	core::cell::RefCell,
-	glam::IVec2,
+	glam::{IVec2, Vec2},
 	sdl2::{
 		image::LoadTexture,
-		rect::{FPoint, Rect},
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
@@ -56,38 +55,25 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 		input: &'nonMap RefCell<InputState>,
 		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
-		let iter = toml_edit::de::from_str::<AtlasDefTOML>(
-			&fs::read_to_string("atlas-defs/male-sprites.toml").unwrap(),
-		)
-		.unwrap()
-		.0
-		.into_iter();
+		let iter =
+			toml_edit::de::from_str::<AtlasDefTOML>(&fs::read_to_string("atlas-defs/male-sprites.toml").unwrap())
+				.unwrap()
+				.0
+				.into_iter();
 		assert_eq!(iter.size_hint(), (1, Some(1)));
 		for (imagePath, vec) in iter {
-			let (image, mut sprites) =
-				(textureCreator.load_texture(imagePath).unwrap(), [default(); Sprites::LEN]);
-			let [invImageWidth, invImageHeight] = {
+			let (image, mut sprites) = (textureCreator.load_texture(imagePath).unwrap(), [default(); Sprites::LEN]);
+			let invImageDimensions = {
 				let query = image.query();
-				[1. / (query.width as f32), 1. / (query.height as f32)]
+				Vec2::new(query.width as _, query.height as _).recip()
 			};
 			for (i, srcX, srcY, srcWidth, srcHeight, offsetX, offsetY) in vec.into_iter() {
-				let src = Rect::new(srcX, srcY, srcWidth, srcHeight);
-				let normSrc = (
-					(srcX as f32) * invImageWidth,
-					(srcY as f32) * invImageHeight,
-					(srcWidth as f32) * invImageWidth - f32::EPSILON,
-					(srcHeight as f32) * invImageHeight - f32::EPSILON,
+				sprites[i] = AtlasRegion::new(
+					invImageDimensions,
+					Vec2::new(srcX as _, srcY as _),
+					IVec2::new(srcWidth as _, srcHeight as _),
+					IVec2::new(offsetX, offsetY),
 				);
-				sprites[i] = AtlasRegion {
-					src,
-					offset: IVec2::new(offsetX, offsetY),
-					texCoords: [
-						FPoint::new(normSrc.0, normSrc.1),
-						FPoint::new(normSrc.0 + normSrc.2, normSrc.1),
-						FPoint::new(normSrc.0, normSrc.1 + normSrc.3),
-						FPoint::new(normSrc.0 + normSrc.2, normSrc.1 + normSrc.3),
-					],
-				};
 			}
 			let mаp;
 			return Self {

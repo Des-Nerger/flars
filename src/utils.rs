@@ -1,5 +1,5 @@
 use {
-	glam::IVec2,
+	glam::{IVec2, Vec2},
 	sdl2::{
 		rect::{FPoint, Rect},
 		render::Texture,
@@ -55,16 +55,29 @@ pub struct Renderable<'a> {
 
 #[derive(Clone, Copy)]
 pub struct AtlasRegion {
-	pub src: Rect,
-	pub offset: IVec2,
+	pub vertexOffsets: [IVec2; 4],
 	pub texCoords: [FPoint; 4],
 }
 impl Default for AtlasRegion {
 	fn default() -> Self {
-		Self {
-			src: Rect::new(default(), default(), default(), default()),
-			offset: default(),
-			texCoords: [IVec2::default().intо(); 4],
+		Self { vertexOffsets: default(), texCoords: [IVec2::default().intо(); 4] }
+	}
+}
+impl AtlasRegion {
+	pub fn new(invImageDimensions: Vec2, srcPos: Vec2, srcDimensions: IVec2, posOffset: IVec2) -> Self {
+		AtlasRegion {
+			vertexOffsets: [[0, 0], [srcDimensions.x, 0], [0, srcDimensions.y], srcDimensions.to_array()]
+				.map(|elem| posOffset - IVec2::from_array(elem)),
+			texCoords: {
+				let normSrcPos = srcPos * invImageDimensions;
+				let normSrcDimensions = srcDimensions.as_vec2() * invImageDimensions - Vec2::splat(f32::EPSILON);
+				[
+					FPoint::new(normSrcPos.x, normSrcPos.y),
+					FPoint::new(normSrcPos.x + normSrcDimensions.x, normSrcPos.y),
+					FPoint::new(normSrcPos.x, normSrcPos.y + normSrcDimensions.y),
+					FPoint::new(normSrcPos.x + normSrcDimensions.x, normSrcPos.y + normSrcDimensions.y),
+				]
+			},
 		}
 	}
 }

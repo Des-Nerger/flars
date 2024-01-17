@@ -1,9 +1,8 @@
 use {
 	crate::utils::{default, AtlasDefTOML, AtlasRegion},
-	glam::IVec2,
+	glam::{IVec2, Vec2},
 	sdl2::{
 		image::LoadTexture,
-		rect::{FPoint, Rect},
 		render::{Texture, TextureCreator},
 		video::WindowContext,
 	},
@@ -24,9 +23,9 @@ impl<'a> Tileset<'a> {
 		assert_eq!(iter.size_hint(), (1, Some(1)));
 		for (imagePath, vec) in iter {
 			let (image, mut tiles) = (textureCreator.load_texture(imagePath).unwrap(), Vec::new());
-			let [invImageWidth, invImageHeight] = {
+			let invImageDimensions = {
 				let query = image.query();
-				[1. / (query.width as f32), 1. / (query.height as f32)]
+				Vec2::new(query.width as _, query.height as _).recip()
 			};
 
 			/* Greater indices are likely to come latter, hence the .rev optimization. */
@@ -34,23 +33,12 @@ impl<'a> Tileset<'a> {
 				if i >= tiles.len() {
 					tiles.resize_with(i + 1, default);
 				}
-				let src = Rect::new(srcX, srcY, srcWidth, srcHeight);
-				let normSrc = (
-					(srcX as f32) * invImageWidth,
-					(srcY as f32) * invImageHeight,
-					(srcWidth as f32) * invImageWidth - f32::EPSILON,
-					(srcHeight as f32) * invImageHeight - f32::EPSILON,
+				tiles[i] = AtlasRegion::new(
+					invImageDimensions,
+					Vec2::new(srcX as _, srcY as _),
+					IVec2::new(srcWidth as _, srcHeight as _),
+					IVec2::new(offsetX, offsetY),
 				);
-				tiles[i] = AtlasRegion {
-					src,
-					offset: IVec2::new(offsetX, offsetY),
-					texCoords: [
-						FPoint::new(normSrc.0, normSrc.1),
-						FPoint::new(normSrc.0 + normSrc.2, normSrc.1),
-						FPoint::new(normSrc.0, normSrc.1 + normSrc.3),
-						FPoint::new(normSrc.0 + normSrc.2, normSrc.1 + normSrc.3),
-					],
-				};
 			}
 			return Self { tiles: tiles.into_boxed_slice(), image };
 		}
