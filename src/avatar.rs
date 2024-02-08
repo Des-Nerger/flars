@@ -10,6 +10,7 @@ use {
 	crate::{
 		input_state::{InputCommand::*, *},
 		map_iso::*,
+		renderer::Renderer,
 		utils::{
 			default, AtlasDefTOML, AtlasRegion,
 			Direction::{self, *},
@@ -18,11 +19,7 @@ use {
 	},
 	core::cell::RefCell,
 	glam::{IVec2, Vec2},
-	sdl2::{
-		image::LoadTexture,
-		render::{Texture, TextureCreator},
-		video::WindowContext,
-	},
+	glium::Texture2d,
 	std::fs,
 	strum::EnumCount,
 };
@@ -37,7 +34,7 @@ type Sprites = [AtlasRegion; Direction::COUNT * FRAME_COUNT];
 
 pub struct Avatar<'map, 'nonMap> {
 	sprites: Sprites,
-	image: Texture<'nonMap>,
+	image: Texture2d,
 	input: &'nonMap RefCell<InputState>,
 	map: &'map RefCell<MapIso<'nonMap>>,
 
@@ -51,7 +48,7 @@ pub struct Avatar<'map, 'nonMap> {
 
 impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 	pub fn new(
-		textureCreator: &'nonMap TextureCreator<WindowContext>,
+		renderer: &'nonMap Renderer,
 		input: &'nonMap RefCell<InputState>,
 		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
@@ -62,10 +59,10 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 				.into_iter();
 		assert_eq!(iter.size_hint(), (1, Some(1)));
 		for (imagePath, vec) in iter {
-			let (image, mut sprites) = (textureCreator.load_texture(imagePath).unwrap(), [default(); Sprites::LEN]);
+			let (image, mut sprites) = (renderer.loadTexture2d(imagePath), [default(); Sprites::LEN]);
 			let invImageDimensions = {
-				let query = image.query();
-				Vec2::new(query.width as _, query.height as _).recip()
+				let (width, height) = image.dimensions();
+				Vec2::new(width as _, height as _).recip()
 			};
 			for (i, srcX, srcY, srcWidth, srcHeight, offsetX, offsetY) in vec.into_iter() {
 				sprites[i] = AtlasRegion::new(
@@ -148,60 +145,60 @@ impl<'map, 'nonMap> Avatar<'map, 'nonMap> {
 	}
 
 	pub fn logic(&mut self) {
-		let a /*vatar */ = self;
+		let o = self;
 		use AvatarState::*;
-		match a.curState {
+		match o.curState {
 			STANCE => {
 				(|| {
-					(a.curFrame, a.animForward) = if a.animForward {
-						a.curFrame += 1;
-						if a.curFrame <= 23 {
+					(o.curFrame, o.animForward) = if o.animForward {
+						o.curFrame += 1;
+						if o.curFrame <= 23 {
 							return;
 						}
 						(23, false)
 					} else {
-						a.curFrame -= 1;
-						if a.curFrame >= 0 {
+						o.curFrame -= 1;
+						if o.curFrame >= 0 {
 							return;
 						}
 						(0, true)
 					};
 				})();
-				a.displayedFrame = a.curFrame / 6;
+				o.displayedFrame = o.curFrame / 6;
 
 				// handle transitions to RUN
-				a.setDirection();
-				if a.pressingMove() {
-					if a.mоve() {
-						(a.curFrame, a.curState) = (1, RUN);
+				o.setDirection();
+				if o.pressingMove() {
+					if o.mоve() {
+						(o.curFrame, o.curState) = (1, RUN);
 					}
 				}
 			}
 			RUN => {
-				a.curFrame += 1;
-				if a.curFrame >= 16 {
-					a.curFrame = 0;
+				o.curFrame += 1;
+				if o.curFrame >= 16 {
+					o.curFrame = 0;
 				}
-				a.displayedFrame = (a.curFrame / 2) + 4;
+				o.displayedFrame = (o.curFrame / 2) + 4;
 
 				// handle direction changes
-				a.setDirection();
+				o.setDirection();
 
 				// handle transition to STANCE
 				(|| {
-					if !a.pressingMove() {
-					} else if !a.mоve() {
+					if !o.pressingMove() {
+					} else if !o.mоve() {
 					} else {
 						return;
 					};
-					a.curState = STANCE;
+					o.curState = STANCE;
 				})();
 			}
 		}
 
 		// calc new cam position from player position
 		// cam is focused at player position
-		a.map.borrow_mut().cam = a.pos;
+		o.map.borrow_mut().cam = o.pos;
 	}
 
 	pub fn getRender(&self) -> Renderable<'_> {

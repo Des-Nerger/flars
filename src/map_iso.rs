@@ -1,32 +1,29 @@
 use {
 	crate::{
 		collider::*,
+		renderer::{Renderer, Vertex, WHITE},
 		settings::{SCREEN_CENTER, TILE_HEIGHT_HALF, TILE_WIDTH_HALF, UNITS_PER_TILE},
 		tileset::*,
 		unlet,
-		utils::{default, uЗ2, AtlasRegion, Direction, Intо, Renderable, __},
+		utils::{default, uЗ2, AtlasRegion, Direction, Renderable, __},
 	},
 	core::{array, iter, str::FromStr},
 	glam::IVec2,
-	sdl2::{
-		pixels::RColor,
-		render::{Canvas, TextureCreator, Vertex},
-		video::{Window, WindowContext},
-	},
+	glium::Surface,
 	tiled_json_rs::{self as tiled, LayerType::TileLayer, TiledValue},
 };
-const WHITE: RColor = RColor::WHITE;
 
 pub struct MapIso<'a> {
 	pub widthLog2: u32,
 	pub cam: IVec2,
 	pub spawn: IVec2,
 	pub spawnDirection: Direction,
-	pub tileset: Tileset<'a>,
+	pub tileset: Tileset,
 
 	pub background: Box<[u32]>,
 	pub object: Box<[u32]>,
 	pub collider: Collider,
+	renderer: &'a Renderer,
 	verticesBuf: Vec<Vertex>,
 	vertIndicesBuf: Vec<u32>,
 }
@@ -38,8 +35,7 @@ trait VerticesVecExt {
 impl VerticesVecExt for Vec<Vertex> {
 	fn pushRect(&mut self, atlasRegion: &AtlasRegion, pos: IVec2) {
 		self.extend(
-			(0..4)
-				.map(|i| Vertex::new((pos - atlasRegion.vertexOffsets[i]).intо(), WHITE, atlasRegion.texCoords[i])),
+			(0..4).map(|i| Vertex::new(pos - atlasRegion.vertexOffsets[i], WHITE, atlasRegion.texCoords[i])),
 		);
 	}
 }
@@ -51,10 +47,10 @@ trait VertIndicesVecExt {
 impl VertIndicesVecExt for Vec<u32> {
 	fn ensureCount(&mut self, count: usize) {
 		if self.len() < count {
-			let mut v /*ertIndex */ = (self.len() / 6 * 4) as u32;
+			let mut /* vert_*/ i /*ndex */ = (self.len() / 6 * 4) as u32;
 			loop {
-				self.extend_from_slice(&[v + 0, v + 1, v + 2, v + 2, v + 1, v + 3]);
-				v += 4;
+				self.extend_from_slice(&[i + 0, i + 1, i + 2, i + 2, i + 1, i + 3]);
+				i += 4;
 				if self.len() == count {
 					break;
 				}
@@ -64,7 +60,7 @@ impl VertIndicesVecExt for Vec<u32> {
 }
 
 impl<'a> MapIso<'a> {
-	pub fn new(textureCreator: &'a TextureCreator<WindowContext>) -> Self {
+	pub fn new(renderer: &'a Renderer) -> Self {
 		let (
 			mut spawn,
 			mut spawnDirection,
@@ -123,16 +119,17 @@ impl<'a> MapIso<'a> {
 			cam: default(),
 			spawn,
 			spawnDirection,
-			tileset: Tileset::new(textureCreator, tilesetPath),
+			tileset: Tileset::new(renderer, tilesetPath),
 			background,
 			object,
 			collider: Collider::new(colmap, widthLog2Ceil as _),
+			renderer,
 			verticesBuf: Vec::new(),
 			vertIndicesBuf: Vec::new(),
 		}
 	}
 
-	pub fn render(&mut self, screen: &mut Canvas<Window>, r: Renderable<'_>) {
+	pub fn render(&mut self, screen: &mut impl Surface, r: Renderable<'_>) {
 		// r will become a list of renderables.  Everything not on the map already:
 		// - hero
 		// - npcs and monsters
@@ -142,11 +139,11 @@ impl<'a> MapIso<'a> {
 		// renderables while we're also moving through the map tiles.  After we draw each map tile we
 		// check to see if it's time to draw the next renderable yet.
 
-		let m /*apIso */ = self;
+		let o = self;
 		let (width, height, [x0, y0], mut vertIndicesCount) = (
-			1 << m.widthLog2,
-			(m.background.len() >> m.widthLog2) as i32,
-			[SCREEN_CENTER.x - (m.cam.x - m.cam.y), SCREEN_CENTER.y - ((m.cam.x + m.cam.y) / 2)],
+			1 << o.widthLog2,
+			(o.background.len() >> o.widthLog2) as i32,
+			[SCREEN_CENTER.x - (o.cam.x - o.cam.y), SCREEN_CENTER.y - ((o.cam.x + o.cam.y) / 2)],
 			0,
 		);
 		const NO_TILE: u32 = 0;
@@ -159,9 +156,9 @@ impl<'a> MapIso<'a> {
 				{
 					let mut pos = pos;
 					for _i in 0..width {
-						let currentTile = m.background[ij];
+						let currentTile = o.background[ij];
 						if currentTile != NO_TILE {
-							m.verticesBuf.pushRect(&m.tileset.tiles[currentTile as __], pos);
+							o.verticesBuf.pushRect(&o.tileset.tiles[currentTile as __], pos);
 							vertIndicesCount += 6;
 						}
 						ij += 1;
@@ -180,25 +177,28 @@ impl<'a> MapIso<'a> {
 				{
 					let mut pos = pos;
 					for i in 0..width {
-						let currentTile = m.object[ij];
+						let currentTile = o.object[ij];
 						if currentTile != NO_TILE {
-							m.verticesBuf.pushRect(&m.tileset.tiles[currentTile as __], pos);
+							o.verticesBuf.pushRect(&o.tileset.tiles[currentTile as __], pos);
 							vertIndicesCount += 6;
 						}
 
 						// entities go in this layer
 						if r.mapPos / UNITS_PER_TILE == IVec2::new(i, j) {
-							m.vertIndicesBuf.ensureCount(vertIndicesCount);
-							screen
-								.geometry(&m.tileset.image, &m.verticesBuf, Some(&m.vertIndicesBuf[..vertIndicesCount]))
-								.unwrap();
-							m.verticesBuf.clear();
+							o.vertIndicesBuf.ensureCount(vertIndicesCount);
+							o.renderer.geometry(
+								screen,
+								&o.tileset.image,
+								&o.verticesBuf,
+								&o.vertIndicesBuf[..vertIndicesCount],
+							);
+							o.verticesBuf.clear();
 							vertIndicesCount = 0;
 
 							// draw renderable
-							m.verticesBuf.pushRect(r.atlasRegion, SCREEN_CENTER);
-							screen.geometry(r.image, &m.verticesBuf, Some(&m.vertIndicesBuf[..6])).unwrap();
-							m.verticesBuf.clear();
+							o.verticesBuf.pushRect(r.atlasRegion, SCREEN_CENTER);
+							o.renderer.geometry(screen, r.image, &o.verticesBuf, &o.vertIndicesBuf[..6]);
+							o.verticesBuf.clear();
 						}
 
 						ij += 1;
@@ -209,8 +209,8 @@ impl<'a> MapIso<'a> {
 			}
 		}
 
-		m.vertIndicesBuf.ensureCount(vertIndicesCount);
-		screen.geometry(&m.tileset.image, &m.verticesBuf, Some(&m.vertIndicesBuf[..vertIndicesCount])).unwrap();
-		m.verticesBuf.clear();
+		o.vertIndicesBuf.ensureCount(vertIndicesCount);
+		o.renderer.geometry(screen, &o.tileset.image, &o.verticesBuf, &o.vertIndicesBuf[..vertIndicesCount]);
+		o.verticesBuf.clear();
 	}
 }

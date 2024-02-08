@@ -1,31 +1,30 @@
 use {
-	crate::utils::{default, AtlasDefTOML, AtlasRegion},
-	glam::{IVec2, Vec2},
-	sdl2::{
-		image::LoadTexture,
-		render::{Texture, TextureCreator},
-		video::WindowContext,
+	crate::{
+		renderer::Renderer,
+		utils::{default, AtlasDefTOML, AtlasRegion},
 	},
+	glam::{IVec2, Vec2},
+	glium::Texture2d,
 	std::fs,
 };
 
-pub struct Tileset<'a> {
+pub struct Tileset {
 	pub tiles: Box<[AtlasRegion]>,
-	pub image: Texture<'a>,
+	pub image: Texture2d,
 }
 
-impl<'a> Tileset<'a> {
-	pub fn new(textureCreator: &'a TextureCreator<WindowContext>, tilesetPath: String) -> Self {
+impl Tileset {
+	pub fn new(renderer: &Renderer, tilesetPath: String) -> Self {
 		let iter = toml_edit::de::from_str::<AtlasDefTOML>(&fs::read_to_string(tilesetPath).unwrap())
 			.unwrap()
 			.0
 			.into_iter();
 		assert_eq!(iter.size_hint(), (1, Some(1)));
 		for (imagePath, vec) in iter {
-			let (image, mut tiles) = (textureCreator.load_texture(imagePath).unwrap(), Vec::new());
+			let (image, mut tiles) = (renderer.loadTexture2d(imagePath), Vec::new());
 			let invImageDimensions = {
-				let query = image.query();
-				Vec2::new(query.width as _, query.height as _).recip()
+				let (width, height) = image.dimensions();
+				Vec2::new(width as _, height as _).recip()
 			};
 
 			/* Greater indices are likely to come latter, hence the .rev optimization. */

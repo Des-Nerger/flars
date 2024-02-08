@@ -7,12 +7,9 @@
  * @license GPLv3
  */
 use {
-	crate::{avatar::*, input_state::*, map_iso::*, utils::__},
+	crate::{avatar::*, input_state::*, map_iso::*, renderer::Renderer, utils::__},
 	core::cell::RefCell,
-	sdl2::{
-		render::{Canvas, TextureCreator},
-		video::{Window, WindowContext},
-	},
+	glium::Surface,
 };
 
 pub struct GameEngine<'map, 'nonMap> {
@@ -29,11 +26,11 @@ impl<'map, 'nonMap> GameEngine<'map, 'nonMap> {
 	 * [`lеt!(_ = &mut GameEngine::new(..))`]: crate::lеt
 	 */
 	pub fn new(
-		textureCreator: &'nonMap TextureCreator<WindowContext>,
+		renderer: &'nonMap Renderer,
 		input: &'nonMap RefCell<InputState>,
 		map: &'map RefCell<MapIso<'nonMap>>,
 	) -> Self {
-		GameEngine { input, playerChar: Avatar::new(textureCreator, input, map), map, done: false }
+		GameEngine { input, playerChar: Avatar::new(renderer, input, map), map, done: false }
 	}
 
 	/**
@@ -51,7 +48,7 @@ impl<'map, 'nonMap> GameEngine<'map, 'nonMap> {
 	/**
 	 * Render all graphics for a single frame
 	 */
-	pub fn render(&self, screen: &mut Canvas<Window>) {
+	pub fn render(&self, screen: &mut impl Surface) {
 		// The strategy here is to make a list of Renderables from all objects not already on the map.
 		// Pass this list/array to the map, which will draw them inline with the map tiles/objects.
 		self.map.borrow_mut().render(screen, self.playerChar.getRender());
