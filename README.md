@@ -1,9 +1,9 @@
 # flars
 Flars is a reimplementation of the Free/Libre Action Roleplaying game Engine ([flare-engine](https://github.com/flareteam/flare-engine)) v0.0x, (re)written in Rust.  
-Requires the SDL2 and SDL2_image development libraries to be installed.
+Requires the SDL2 development libraries to be installed.
 For instance, in Debian / Ubuntu this can be done with:
 ```bash
-$ sudo apt install libsdl2{,-image}-dev
+$ sudo apt install libsdl2-dev
 ```
 After that, the engine / game should be runnable using:
 ```sh
