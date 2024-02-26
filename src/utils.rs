@@ -68,7 +68,7 @@ impl AtlasRegion {
 				.map(|elem| posOffset - IVec2::from_array(elem)),
 			texCoords: {
 				let normSrcPos = srcPos * invImageDimensions;
-				let normSrcDimensions = srcDimensions.as_vec2() * invImageDimensions - Vec2::splat(f32::EPSILON);
+				let normSrcDimensions = srcDimensions.as_vec2() * invImageDimensions;
 				[
 					Vec2::new(normSrcPos.x, normSrcPos.y),
 					Vec2::new(normSrcPos.x + normSrcDimensions.x, normSrcPos.y),

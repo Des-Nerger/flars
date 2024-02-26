@@ -71,12 +71,12 @@ fn main() {
 		engine.logic();
 		{
 			let screen = &mut screenTexture.as_surface();
-			screen.clear_color(ALMOST_BLACK[0], ALMOST_BLACK[1], ALMOST_BLACK[2], ALMOST_BLACK[3]);
+			screen.clear_color_srgb(ALMOST_BLACK[0], ALMOST_BLACK[1], ALMOST_BLACK[2], ALMOST_BLACK[3]);
 			engine.render(screen);
 		}
 		{
 			let mut screen = renderer.display.draw();
-			screen.clear_color(ALMOST_BLACK[0], ALMOST_BLACK[1], ALMOST_BLACK[2], ALMOST_BLACK[3]);
+			screen.clear_color_srgb(ALMOST_BLACK[0], ALMOST_BLACK[1], ALMOST_BLACK[2], ALMOST_BLACK[3]);
 			renderer.copy_wholeScreen(&mut screen, screenTexture);
 			thread::sleep(nextFrame_instant - Instant::now());
 			nextFrame_instant += delay;

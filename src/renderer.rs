@@ -11,7 +11,9 @@ use {
 		index::PrimitiveType::TrianglesList,
 		program::Program,
 		texture::{RawImage2d, Texture2d},
-		uniform, IndexBuffer, Surface, VertexBuffer,
+		uniform,
+		uniforms::{MagnifySamplerFilter, MinifySamplerFilter, Sampler, SamplerBehavior, SamplerWrapFunction},
+		IndexBuffer, Surface, VertexBuffer,
 	},
 	glium_sdl2::SDL2Facade,
 	std::path::Path,
@@ -19,7 +21,7 @@ use {
 
 pub struct Renderer {
 	pub display: SDL2Facade,
-	sdl2_default_glProgram: Program,
+	glProgram: Program,
 	wholeScreen_vertices: VertexBuffer<Vertex>,
 	wholeScreen_indices: IndexBuffer<Index>,
 	projection: [[f32; 4]; 4],
@@ -27,7 +29,7 @@ pub struct Renderer {
 
 impl Renderer {
 	pub fn new(display: SDL2Facade) -> Self {
-		let sdl2_default_glProgram = Program::from_source(
+		let glProgram = Program::from_source(
 			&display,
 			r"
 				#version 100
@@ -42,26 +44,21 @@ impl Renderer {
 				void main() {
 					v_texCoord = a_texCoord;
 					gl_Position = u_projection * vec4(a_position, 0.0, 1.0);
-					gl_PointSize = 1.0;
 					v_color = a_color;
 				}
 			",
 			r"
 				#version 100
-
-				#ifdef GL_FRAGMENT_PRECISION_HIGH
-					#define SDL_TEXCOORD_PRECISION highp
-				#else
-					#define SDL_TEXCOORD_PRECISION mediump
-				#endif
 				precision mediump float;
 
-				uniform sampler2D u_texture;
-				varying mediump vec4 v_color;
-				varying SDL_TEXCOORD_PRECISION vec2 v_texCoord;
+				uniform sampler2D u_texture0;
+				uniform sampler2D u_texture1;
+				varying vec4 v_color;
+				varying vec2 v_texCoord;
 				void main() {
-					gl_FragColor = texture2D(u_texture, v_texCoord);
-					gl_FragColor *= v_color;
+					gl_FragColor = v_color * ((int(v_texCoord.y) == 0)?
+					                           texture2D(u_texture0, vec2(v_texCoord.x, fract(v_texCoord.y))):
+					                           texture2D(u_texture1, vec2(v_texCoord.x, fract(v_texCoord.y))));
 				}
 			",
 			None,
@@ -80,7 +77,7 @@ impl Renderer {
 		let wholeScreen_indices = IndexBuffer::new(&display, TrianglesList, &[0, 1, 2, 2, 1, 3]).unwrap();
 		Self {
 			display,
-			sdl2_default_glProgram,
+			glProgram,
 			wholeScreen_vertices,
 			wholeScreen_indices,
 			projection: Mat4::orthographic_rh_gl(0., SCREEN_WIDTH as _, 0., SCREEN_HEIGHT as _, 1., -1.)
@@ -90,20 +87,20 @@ impl Renderer {
 
 	pub fn copy_wholeScreen(&self, surface: &mut impl Surface, texture: &Texture2d) {
 		let o = self;
-		o.geometryBuffers(surface, texture, &o.wholeScreen_vertices, &o.wholeScreen_indices);
+		o.geometryBuffers(surface, &[texture], &o.wholeScreen_vertices, &o.wholeScreen_indices);
 	}
 
 	pub fn geometry(
 		&self,
 		surface: &mut impl Surface,
-		texture: &Texture2d,
+		textures: &[&Texture2d],
 		vertices: &[Vertex],
 		indices: &[Index],
 	) {
 		let o = self;
 		o.geometryBuffers(
 			surface,
-			texture,
+			textures,
 			&VertexBuffer::new(&o.display, vertices).unwrap(),
 			&IndexBuffer::new(&o.display, TrianglesList, indices).unwrap(),
 		);
@@ -112,19 +109,27 @@ impl Renderer {
 	fn geometryBuffers(
 		&self,
 		surface: &mut impl Surface,
-		texture: &Texture2d,
+		textures: &[&Texture2d],
 		vertices: &VertexBuffer<Vertex>,
 		indices: &IndexBuffer<Index>,
 	) {
 		let o = self;
+		const SAMPLER_BEHAVIOR: SamplerBehavior = SamplerBehavior {
+			wrap_function: (SamplerWrapFunction::Repeat, SamplerWrapFunction::Repeat, SamplerWrapFunction::Mirror),
+			minify_filter: MinifySamplerFilter::Nearest,
+			magnify_filter: MagnifySamplerFilter::Nearest,
+			depth_texture_comparison: None,
+			max_anisotropy: 1,
+		};
 		surface
 			.draw(
 				vertices,
 				indices,
-				&o.sdl2_default_glProgram,
+				&o.glProgram,
 				&uniform! {
 					u_projection: o.projection,
-					u_texture: texture,
+					u_texture0: Sampler(textures[0], SAMPLER_BEHAVIOR),
+					u_texture1: Sampler(textures[textures.len() - 1], SAMPLER_BEHAVIOR),
 				},
 				&DrawParameters { blend: Blend::alpha_blending(), ..default() },
 			)

@@ -8,7 +8,7 @@ use {
 		utils::{default, uЗ2, AtlasRegion, Direction, Renderable, __},
 	},
 	core::{array, iter, str::FromStr},
-	glam::IVec2,
+	glam::{IVec2, Vec2},
 	glium::Surface,
 	tiled_json_rs::{self as tiled, LayerType::TileLayer, TiledValue},
 };
@@ -28,15 +28,22 @@ pub struct MapIso<'a> {
 	vertIndicesBuf: Vec<u32>,
 }
 
+struct TextureIndex(u8);
+
 trait VerticesVecExt {
-	fn pushRect(&mut self, atlasRegion: &AtlasRegion, pos: IVec2);
+	fn pushRect(&mut self, textureIndex: TextureIndex, atlasRegion: &AtlasRegion, pos: IVec2);
 }
 
 impl VerticesVecExt for Vec<Vertex> {
-	fn pushRect(&mut self, atlasRegion: &AtlasRegion, pos: IVec2) {
-		self.extend(
-			(0..4).map(|i| Vertex::new(pos - atlasRegion.vertexOffsets[i], WHITE, atlasRegion.texCoords[i])),
-		);
+	fn pushRect(&mut self, textureIndex: TextureIndex, atlasRegion: &AtlasRegion, pos: IVec2) {
+		self.extend((0..4).map(|i| {
+			let texCoord = atlasRegion.texCoords[i];
+			Vertex::new(
+				pos - atlasRegion.vertexOffsets[i],
+				WHITE,
+				Vec2::new(texCoord.x, textureIndex.0 as f32 + texCoord.y),
+			)
+		}));
 	}
 }
 
@@ -158,7 +165,7 @@ impl<'a> MapIso<'a> {
 					for _i in 0..width {
 						let currentTile = o.background[ij];
 						if currentTile != NO_TILE {
-							o.verticesBuf.pushRect(&o.tileset.tiles[currentTile as __], pos);
+							o.verticesBuf.pushRect(TextureIndex(0), &o.tileset.tiles[currentTile as __], pos);
 							vertIndicesCount += 6;
 						}
 						ij += 1;
@@ -179,26 +186,15 @@ impl<'a> MapIso<'a> {
 					for i in 0..width {
 						let currentTile = o.object[ij];
 						if currentTile != NO_TILE {
-							o.verticesBuf.pushRect(&o.tileset.tiles[currentTile as __], pos);
+							o.verticesBuf.pushRect(TextureIndex(0), &o.tileset.tiles[currentTile as __], pos);
 							vertIndicesCount += 6;
 						}
 
 						// entities go in this layer
 						if r.mapPos / UNITS_PER_TILE == IVec2::new(i, j) {
-							o.vertIndicesBuf.ensureCount(vertIndicesCount);
-							o.renderer.geometry(
-								screen,
-								&o.tileset.image,
-								&o.verticesBuf,
-								&o.vertIndicesBuf[..vertIndicesCount],
-							);
-							o.verticesBuf.clear();
-							vertIndicesCount = 0;
-
 							// draw renderable
-							o.verticesBuf.pushRect(r.atlasRegion, SCREEN_CENTER);
-							o.renderer.geometry(screen, r.image, &o.verticesBuf, &o.vertIndicesBuf[..6]);
-							o.verticesBuf.clear();
+							o.verticesBuf.pushRect(TextureIndex(1), r.atlasRegion, SCREEN_CENTER);
+							vertIndicesCount += 6;
 						}
 
 						ij += 1;
@@ -210,7 +206,12 @@ impl<'a> MapIso<'a> {
 		}
 
 		o.vertIndicesBuf.ensureCount(vertIndicesCount);
-		o.renderer.geometry(screen, &o.tileset.image, &o.verticesBuf, &o.vertIndicesBuf[..vertIndicesCount]);
+		o.renderer.geometry(
+			screen,
+			&[&o.tileset.image, r.image],
+			&o.verticesBuf,
+			&o.vertIndicesBuf[..vertIndicesCount],
+		);
 		o.verticesBuf.clear();
 	}
 }
