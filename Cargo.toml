@@ -3,7 +3,7 @@ members = ["third-party/*"]
 
 [package]
 name = "flars"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 license = "GPL-3.0"
 authors = ["Des-Nerger <mixerator@rambler.ru>"]
@@ -17,21 +17,21 @@ strip = true
 
 [profile.dev]
 opt-level = 1
-debug = false
+debug = true
 
 [profile.dev.package."*"]
 opt-level = 3
 debug = false
 
 [dependencies]
-tiled-json-rs = "0.2"
-toml_edit = { version = "0.19", features = ["serde", "perf"] }
-glam = "0.22"
-strum = { version = "0.24", features = ["derive"] }
+tiled-json-rs = "0"
+toml_edit = { version = "0", features = ["serde", "perf"] }
+glam = "0"
+strum = { version = "0", features = ["derive"] }
 ary = { path = "third-party/ary" }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 glium_sdl2 = { git = "https://github.com/Des-Nerger/glium-sdl2" }
-sdl2 = "0.36"
-glium = { version = "0.33", default-features = false }
-image = { version = "0.24", default-features = false, features = ["png"] }
+sdl2 = "0"
+glium = { version = "0", default-features = false }
+image = { version = "0", default-features = false, features = ["png"] }
 

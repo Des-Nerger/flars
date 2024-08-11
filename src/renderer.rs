@@ -137,7 +137,7 @@ impl Renderer {
 	}
 
 	pub fn loadTexture2d(&self, filePath: impl AsRef<Path>) -> Texture2d {
-		let image = image::io::Reader::open(filePath).unwrap().decode().unwrap().into_rgba8();
+		let image = image::ImageReader::open(filePath).unwrap().decode().unwrap().into_rgba8();
 		let imageDimensions = image.dimensions();
 		let image = RawImage2d::from_raw_rgba(image.into_raw(), imageDimensions);
 		Texture2d::new(&self.display, image).unwrap()

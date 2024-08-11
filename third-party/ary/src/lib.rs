@@ -416,14 +416,14 @@ macro_rules! __parse_key {
     const START: __usize = $a;
     let _v = $v;
     let _len: __usize = _v.len();
-    $cb!($arr, $total_len, __Some(START), __Some(START + _len), (<), |_i| $v[_i - START]);
+    _ = $cb!($arr, $total_len, __Some(START), __Some(START + _len), (<), |_i| $v[_i - START]);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 
   ($cb:tt, $arr:ident, $total_len:expr => .._: $v:expr $(, $($tt:tt)*)?) => {{
     let _v = $v;
     let _len: __usize = _v.len();
-    $cb!($arr, $total_len, __None, __Some(_len), (<), |_i| _v[_i]);
+    _ = $cb!($arr, $total_len, __None, __Some(_len), (<), |_i| _v[_i]);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 
@@ -461,7 +461,7 @@ macro_rules! __parse_key {
   ($cb:tt, $arr:ident, $total_len:expr => $a:tt: $v:expr $(, $($tt:tt)*)?) => {{
     const START: __usize = $a;
     let _v = $v;
-    $cb!($arr, $total_len, __Some(START), __Some(START + 1), (<), |_| _v);
+    _ = $cb!($arr, $total_len, __Some(START), __Some(START + 1), (<), |_| _v);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 }
@@ -470,13 +470,13 @@ macro_rules! __parse_key {
 #[macro_export]
 macro_rules! __parse_value {
   ($cb:tt, $arr:ident, $total_len:expr, $start:expr, $end:expr, ($cmp:tt) => |$i:tt| $v:expr $(, $($tt:tt)*)?) => {{
-    $cb!($arr, $total_len, $start, $end, ($cmp), |$i| $v);
+    _ = $cb!($arr, $total_len, $start, $end, ($cmp), |$i| $v);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 
   ($cb:tt, $arr:ident, $total_len:expr, $start:expr, $end:expr, ($cmp:tt) => [$e:expr; _] $(, $($tt:tt)*)?) => {{
     let _e = $e;
-    $cb!($arr, $total_len, $start, $end, ($cmp), |_| _e);
+    _ = $cb!($arr, $total_len, $start, $end, ($cmp), |_| _e);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 
@@ -486,7 +486,7 @@ macro_rules! __parse_value {
       __Some(x) => x,
       _ => 0,
     };
-    $cb!($arr, $total_len, __Some(start), $end, ($cmp), |i| v[i - start]);
+    _ = $cb!($arr, $total_len, __Some(start), $end, ($cmp), |i| v[i - start]);
     $crate::__parse_key!($cb, $arr, $total_len => $($($tt)*)?);
   }};
 }
